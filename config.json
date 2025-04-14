@@ -3,7 +3,7 @@
 
   "developer_ids": ["1135568788985749554"],
 
-  "lockBotToDevOnly": true,
+  "lockBotToDevOnly": false,
   
   "enableWebServer": true,
   "serverPort": 6880,
