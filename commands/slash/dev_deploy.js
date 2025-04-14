@@ -153,6 +153,9 @@ module.exports = {
 
         const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 
+        // Eliminar todos los comandos registrados antes de agregar los nuevos
+        await client.application.commands.set([]);  // Elimina todos los comandos
+
         if (isPublic) {
             const route = Routes.applicationCommands(process.env.DISCORD_ID);
             rest.put(route, { body: interactionList })
