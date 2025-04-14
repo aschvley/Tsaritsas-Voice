@@ -35,11 +35,11 @@ module.exports = {
       .setFooter({ text: "Type a command with / to use it." });
 
     try {
-      // Usamos 'interaction.reply' en lugar de 'interaction.followUp'
+      // Solo usamos 'interaction.reply' para responder a la interacción
       await interaction.reply({ embeds: [embed], ephemeral: true });
     } catch (error) {
       console.error("Error in the Help command:", error);
-      await interaction.followUp({ content: 'There was an error displaying the help command.', ephemeral: true });
+      await interaction.reply({ content: 'There was an error displaying the help command.', ephemeral: true });
     }
   }
 };

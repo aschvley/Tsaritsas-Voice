@@ -15,7 +15,7 @@ module.exports = {
       const qotdChannel = interaction.client.channels.cache.get('1305245878877028512'); // Replace with your actual QOTD channel ID
 
       if (!qotdChannel) {
-        return interaction.followUp({ content: 'QOTD channel not found.', ephemeral: true });
+        return interaction.reply({ content: 'QOTD channel not found.', ephemeral: true });
       }
 
       const embed = {
@@ -38,13 +38,14 @@ module.exports = {
       // Resend the same embed in the thread
       await thread.send({ embeds: [embed] });
 
-      // Follow-up message from the bot
+      // Send a message in the thread
       await thread.send("Answer the inquiry here, our Majesty will be reading you attentively ❄️");
 
-      await interaction.followUp({ content: `Question posted in ${qotdChannel}! ✅`, ephemeral: true });
+      // Reply to the interaction with success message
+      await interaction.reply({ content: `Question posted in ${qotdChannel}! ✅`, ephemeral: true });
     } catch (error) {
       console.error(error);
-      await interaction.followUp({ content: 'Something went wrong while sending the QOTD.' });
+      await interaction.reply({ content: 'Something went wrong while sending the QOTD.', ephemeral: true });
     }
   },
 };
