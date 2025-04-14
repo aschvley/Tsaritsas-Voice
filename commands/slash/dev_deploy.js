@@ -101,6 +101,9 @@ module.exports = {
         let undeploy = int && !!int.options.get("undeploy")?.value;
         let targetServer = (!int || isPublic) ? null : int.options.get("server_id")?.value;
 
+        // Defer la respuesta INMEDIATAMENTE
+        await int.deferReply({ flags: [Discord.MessageFlags.Ephemeral] });
+
         let interactionList = [];
 
         // Procesar comandos
@@ -156,7 +159,6 @@ module.exports = {
         const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 
         if (isPublic) {
-            await int.deferReply({ flags: [Discord.MessageFlags.Ephemeral] }); // Usar flags para ephemeral
             const route = Routes.applicationCommands(process.env.DISCORD_ID);
             try {
                 await rest.put(route, { body: interactionList });
@@ -178,28 +180,16 @@ module.exports = {
                 try {
                     await rest.put(route, { body: interactionList });
                     const msg = `Dev commands registered to ${id}!`;
-                    if (int) {
-                        await int.followUp({ content: undeploy ? "Dev commands cleared!" : id === int.guild.id ? "Dev commands registered!" : msg, flags: [Discord.MessageFlags.Ephemeral] });
-                    } else {
-                        console.info(msg);
-                    }
+                    await int.followUp({ content: undeploy ? "Dev commands cleared!" : id === int.guild.id ? "Dev commands registered!" : msg, flags: [Discord.MessageFlags.Ephemeral] });
                     client.shard.broadcastEval(cl => cl.application?.commands?.fetch());
                 } catch (e) {
                     console.error(`Error deploying dev commands to ${id}: ${e.message}`);
-                    if (int) {
-                        await int.followUp({ content: `Error deploying dev commands to ${id}: ${e.message}`, flags: [Discord.MessageFlags.Ephemeral] });
-                    } else {
-                        console.error(`No interaction to reply to for dev deploy on ${id}: ${e.message}`);
-                    }
+                    await int.followUp({ content: `Error deploying dev commands to ${id}: ${e.message}`, flags: [Discord.MessageFlags.Ephemeral] });
                 }
             });
 
-            if (int) {
-                await Promise.all(promises);
-                if (!isPublic) {
-                    await int.editReply({ content: `Successfully deployed/cleared dev commands to ${serverIDs.length} server(s).`, flags: [Discord.MessageFlags.Ephemeral] });
-                }
-            }
+            await Promise.all(promises);
+            await int.editReply({ content: `Successfully deployed/cleared dev commands to ${serverIDs.length} server(s).`, flags: [Discord.MessageFlags.Ephemeral] });
         }
     }
 };
