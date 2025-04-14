@@ -9,9 +9,10 @@ module.exports = {
         .setDescription('The question you want to ask')
         .setRequired(true)
     ),
-  async execute(interaction) {
+
+  async run(interaction) {
     const question = interaction.options.getString('question');
-    const qotdChannel = interaction.client.channels.cache.get('YOUR_PUBLIC_CHANNEL_ID'); // Replace with your actual QOTD channel ID
+    const qotdChannel = interaction.client.channels.cache.get('1305245878877028512'); // Replace with your actual QOTD channel ID
 
     if (!qotdChannel) {
       return interaction.reply({ content: 'QOTD channel not found.', ephemeral: true });

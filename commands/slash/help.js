@@ -4,8 +4,8 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('help')
     .setDescription('Displays a list of all available commands.'),
-    
-  async execute(interaction) {
+
+  async run(interaction) {
     const embed = new EmbedBuilder()
       .setTitle("Tsaritsa's Voice — Command List ❄️")
       .setColor(0x91c9f7)
