@@ -6,7 +6,8 @@ module.exports = {
     },
 
     async run(client, int, tools, db) { // <-- Recibe 'db' como cuarto argumento
-        const { settings } = await db.get(int.guild.id) || { settings: {} }; // Usa 'db' directamente aquí
+        const serverData = await db.fetch(int.guild.id); // <-- Cambia db.get a db.fetch
+        const settings = serverData?.settings || {}; // Accede a las settings si serverData existe
 
         if (!tools.canManageServer(int.member, settings.manualPerms)) {
             return tools.warn("*notMod");
