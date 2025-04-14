@@ -94,7 +94,6 @@ module.exports = {
             { type: "bool", name: "undeploy", description: "Clears all dev commands from the server (or global if it's set to true)", required: false }
         ]
     },
-
     async run(client, int, tools) {
         console.log("Comando dev_deploy ejecutado");
 
@@ -108,7 +107,7 @@ module.exports = {
         if (!undeploy) {
             client.commands.forEach(cmd => {
                 const metadata = cmd.metadata;
-                console.log("Procesando comando:", metadata.name);  // Añadir log aquí
+                console.log("Procesando comando:", metadata.name); // Añadir log aquí
                 if (isPublic && metadata.dev) return;
                 else if (!isPublic && !metadata.dev) return;
 
@@ -155,29 +154,32 @@ module.exports = {
 
         const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 
-        // Eliminar todos los comandos registrados antes de agregar los nuevos
-        await client.application.commands.set([]);  // Elimina todos los comandos
-
         if (isPublic) {
+            await int.deferReply({ ephemeral: true }); // <------------------- ¡Añadir esto al principio!
             const route = Routes.applicationCommands(process.env.DISCORD_ID);
-            await rest.put(route, { body: interactionList })
-                .then(() => {
-                    if (int) int.reply(`**${!undeploy ? `${interactionList.length} global commands registered!` : "Global commands cleared!"}** (Wait a bit, or refresh with Ctrl+R to see changes)`);
-                    else console.info("Global commands registered!");
-                    client.shard.broadcastEval(cl => { cl.application.commands.fetch(); return });
-                }).catch(e => console.error(`Error deploying global commands: ${e.message}`));
+            try {
+                await rest.put(route, { body: interactionList });
+                await int.editReply(`**${!undeploy ? `${interactionList.length} global commands registered!` : "Global commands cleared!"}** (Wait a bit, or refresh with Ctrl+R to see changes)`);
+                client.shard.broadcastEval(cl => { cl.application.commands.fetch(); return });
+            } catch (e) {
+                console.error(`Error deploying global commands: ${e.message}`);
+                await int.editReply(`Error deploying global commands: ${e.message}`); // Responder con el error
+            }
         } else {
             let serverIDs = targetServer ? [targetServer] : (int?.guild) ? [int.guild.id] : config.test_server_ids;
             if (!serverIDs) return console.warn("Cannot deploy dev commands! No test server IDs provided in config.");
 
-            serverIDs.forEach(id => {
+            serverIDs.forEach(async id => { // Usar async/await dentro del forEach para secuenciar (opcional, pero más seguro)
                 const route = Routes.applicationGuildCommands(process.env.DISCORD_ID, id);
-                rest.put(route, { body: interactionList })
-                    .then(() => {
-                        let msg = `Dev commands registered to ${id}!`;
-                        if (int) int.reply(undeploy ? "Dev commands cleared!" : id == int.guild.id ? "Dev commands registered!" : msg);
-                        else console.info(msg);
-                    }).catch(e => console.error(`Error deploying dev commands to ${id}: ${e.message}`));
+                try {
+                    await rest.put(route, { body: interactionList });
+                    let msg = `Dev commands registered to ${id}!`;
+                    await int.reply({ content: undeploy ? "Dev commands cleared!" : id == int.guild.id ? "Dev commands registered!" : msg, ephemeral: true }); // Responder individualmente por servidor
+                    client.shard.broadcastEval(cl => { cl.application.commands.fetch(); return });
+                } catch (e) {
+                    console.error(`Error deploying dev commands to ${id}: ${e.message}`);
+                    await int.reply({ content: `Error deploying dev commands to ${id}: ${e.message}`, ephemeral: true }); // Responder con el error
+                }
             });
         }
     }
