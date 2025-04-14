@@ -4,9 +4,8 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('help')
     .setDescription('Displays a list of all available commands.'),
-  
+
   async run(interaction) {
-    // Create an embed to display all commands available
     const embed = new EmbedBuilder()
       .setTitle("Tsaritsa's Voice — Command List ❄️")
       .setColor(0x91c9f7)
@@ -40,7 +39,7 @@ module.exports = {
       await interaction.reply({ embeds: [embed], ephemeral: true });
     } catch (error) {
       console.error("Error in the Help command:", error);
-      await interaction.followUp({ content: 'There was an error displaying the help command.', ephemeral: true });
+      await interaction.reply({ content: 'There was an error displaying the help command.', ephemeral: true });
     }
   }
 };
