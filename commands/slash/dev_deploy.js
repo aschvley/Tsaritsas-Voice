@@ -12,6 +12,27 @@ function prepareOption(option, arg) {
 }
 
 function createSlashArg(data, arg) {
+    const safeChoices = (choices, expectedType) => {
+        return choices
+            .map(c => {
+                let value = c.value;
+                if (expectedType === "string") {
+                    if (typeof value !== "string") value = String(value);
+                } else if (expectedType === "number") {
+                    if (typeof value !== "number") {
+                        const num = Number(value);
+                        if (isNaN(num)) {
+                            console.warn(`Invalid choice value for "${c.name}":`, value);
+                            return null;
+                        }
+                        value = num;
+                    }
+                }
+                return { name: String(c.name), value };
+            })
+            .filter(Boolean);
+    };
+
     switch (arg.type) {
         case "subcommand":
             return data.addSubcommand(cmd => {
@@ -23,22 +44,22 @@ function createSlashArg(data, arg) {
         case "string":
             return data.addStringOption(option => {
                 prepareOption(option, arg);
-                if (arg.choices) option.setChoices(...arg.choices);
+                if (arg.choices) option.setChoices(...safeChoices(arg.choices, "string"));
                 return option;
             });
         case "integer":
-        case "number":
             return data.addIntegerOption(option => {
                 prepareOption(option, arg);
-                if (arg.choices) option.setChoices(...arg.choices);
+                if (arg.choices) option.setChoices(...safeChoices(arg.choices, "number"));
                 if (!isNaN(arg.min)) option.setMinValue(arg.min);
                 if (!isNaN(arg.max)) option.setMaxValue(arg.max);
                 return option;
             });
+        case "number":
         case "float":
             return data.addNumberOption(option => {
                 prepareOption(option, arg);
-                if (arg.choices) option.setChoices(...arg.choices);
+                if (arg.choices) option.setChoices(...safeChoices(arg.choices, "number"));
                 if (!isNaN(arg.min)) option.setMinValue(arg.min);
                 if (!isNaN(arg.max)) option.setMaxValue(arg.max);
                 return option;
@@ -51,10 +72,14 @@ function createSlashArg(data, arg) {
                 else option.addChannelTypes([Discord.ChannelType.GuildText, Discord.ChannelType.GuildAnnouncement]);
                 return option;
             });
-        case "bool": return data.addBooleanOption(option => prepareOption(option, arg));
-        case "file": return data.addAttachmentOption(option => prepareOption(option, arg));
-        case "user": return data.addUserOption(option => prepareOption(option, arg));
-        case "role": return data.addRoleOption(option => prepareOption(option, arg));
+        case "bool":
+            return data.addBooleanOption(option => prepareOption(option, arg));
+        case "file":
+            return data.addAttachmentOption(option => prepareOption(option, arg));
+        case "user":
+            return data.addUserOption(option => prepareOption(option, arg));
+        case "role":
+            return data.addRoleOption(option => prepareOption(option, arg));
     }
 }
 
