@@ -1,4 +1,4 @@
-const { SlashCommandBuilder } = require('@discordjs/builders');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -9,23 +9,20 @@ module.exports = {
                 .setDescription('The question you want to ask')
                 .setRequired(true)
         ),
-    async run(client, interaction, tools) { // Modificamos la firma de la función run para aceptar los tres argumentos
+    async run(client, interaction, tools) {
         try {
             const question = interaction.options.getString('question');
-            const qotdChannel = client.channels.cache.get('1305245878877028512'); // Usamos 'client' para acceder a los canales
+            const qotdChannel = client.channels.cache.get('1305245878877028512');
 
             if (!qotdChannel) {
                 return interaction.reply({ content: 'QOTD channel not found.', ephemeral: true });
             }
 
-            const embed = {
-                title: '`QOTD`',
-                description: `# ${question}`,
-                color: 0x1abc9c,
-                footer: {
-                    text: 'Reply in the thread below 👇'
-                }
-            };
+            const embed = new EmbedBuilder()
+                .setTitle('`QOTD`')
+                .setDescription(`# ${question}`)
+                .setColor('#93caf6') // Establecer el color aquí
+                .setFooter({ text: 'Reply in the thread below 👇' });
 
             const message = await qotdChannel.send({ embeds: [embed] });
 
@@ -35,14 +32,12 @@ module.exports = {
                 reason: 'QOTD Thread'
             });
 
-            // Resend the same embed in the thread
-            await thread.send({ embeds: [embed] });
+            // Eliminar el envío duplicado del embed al hilo
+            await thread.send("Answer the inquiry here, our Majesty will be reading you attentively❄️");
 
-            // Send a message in the thread
-            await thread.send("Answer the inquiry here, our Majesty will be reading you attentively ❄️");
-
-            // Reply to the interaction with success message
+            // Responder a la interacción DESPUÉS de enviar el mensaje al canal
             await interaction.reply({ content: `Question posted in ${qotdChannel}! ✅`, ephemeral: true });
+
         } catch (error) {
             console.error(error);
             await interaction.reply({ content: 'Something went wrong while sending the QOTD.', ephemeral: true });
