@@ -104,9 +104,11 @@ module.exports = {
 
         let interactionList = [];
 
+        // Procesar comandos
         if (!undeploy) {
             client.commands.forEach(cmd => {
                 const metadata = cmd.metadata;
+                console.log("Procesando comando:", metadata.name);  // Añadir log aquí
                 if (isPublic && metadata.dev) return;
                 else if (!isPublic && !metadata.dev) return;
 
