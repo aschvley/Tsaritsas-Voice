@@ -160,7 +160,7 @@ module.exports = {
 
         if (isPublic) {
             const route = Routes.applicationCommands(process.env.DISCORD_ID);
-            rest.put(route, { body: interactionList })
+            await rest.put(route, { body: interactionList })
                 .then(() => {
                     if (int) int.reply(`**${!undeploy ? `${interactionList.length} global commands registered!` : "Global commands cleared!"}** (Wait a bit, or refresh with Ctrl+R to see changes)`);
                     else console.info("Global commands registered!");
