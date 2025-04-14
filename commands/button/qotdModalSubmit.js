@@ -8,18 +8,22 @@ module.exports = {
         await interaction.deferReply({ ephemeral: true });
         const question = interaction.fields.getTextInputValue('qotd-question-input');
         const qotdChannel = client.channels.cache.get('1305245878877028512');
+        const qotdRoleId = '1305947290791575562'; // ID del rol QOTD
 
         if (!qotdChannel) {
             return await interaction.editReply({ content: 'QOTD channel not found.', ephemeral: true });
         }
 
-        const embed = new EmbedBuilder()
-            .setTitle('`QOTD`')
-            .setDescription(`# ${question}`)
-            .setColor('#325a97')
-            .setFooter({ text: 'Reply in the thread below 👇' });
-
         try {
+            // Enviar el mensaje de introducción con la mención del rol
+            await qotdChannel.send({ content: `<@&${qotdRoleId}>, A query from the Tsaritsa descends upon you. Her Majesty awaits your insightful responses. Let your wisdom be known.` });
+
+            const embed = new EmbedBuilder()
+                .setTitle('`Question of the Day`')
+                .setDescription(`# ${question}`)
+                .setColor('#325a97')
+                .setFooter({ text: 'Reply in the thread below.' });
+
             const message = await qotdChannel.send({ embeds: [embed] });
             const thread = await message.startThread({
                 name: "Discuss the Tsaritsa's question here",
