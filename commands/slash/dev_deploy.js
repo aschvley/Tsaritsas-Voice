@@ -156,15 +156,15 @@ module.exports = {
         const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 
         if (isPublic) {
-            await int.deferReply({ ephemeral: true }); // <------------------- ¡Añadir esto al principio!
+            await int.deferReply({ flags: [Discord.MessageFlags.Ephemeral] }); // Usar flags para ephemeral
             const route = Routes.applicationCommands(process.env.DISCORD_ID);
             try {
                 await rest.put(route, { body: interactionList });
-                await int.editReply(`**${!undeploy ? `${interactionList.length} global commands registered!` : "Global commands cleared!"}** (Wait a bit, or refresh with Ctrl+R to see changes)`);
-                client.shard.broadcastEval(cl => { cl.application.commands.fetch(); return });
+                await int.editReply({ content: `**${!undeploy ? `${interactionList.length} global commands registered!` : "Global commands cleared!"}** (Wait a bit, or refresh with Ctrl+R to see changes)`, flags: [Discord.MessageFlags.Ephemeral] });
+                client.shard.broadcastEval(cl => cl.application?.commands?.fetch());
             } catch (e) {
                 console.error(`Error deploying global commands: ${e.message}`);
-                await int.editReply(`Error deploying global commands: ${e.message}`); // Responder con el error
+                await int.editReply({ content: `Error deploying global commands: ${e.message}`, flags: [Discord.MessageFlags.Ephemeral] });
             }
         } else {
             const serverIDs = targetServer ? [targetServer] : (int?.guild) ? [int.guild.id] : config.test_server_ids;
@@ -172,13 +172,14 @@ module.exports = {
                 return console.warn("Cannot deploy dev commands! No test server IDs provided in config.");
             }
 
-            for (const id of serverIDs) { // Usar for...of para un mejor manejo de async/await
+            // Batching guild command updates to potentially reduce API calls and time
+            const promises = serverIDs.map(async id => {
                 const route = Routes.applicationGuildCommands(process.env.DISCORD_ID, id);
                 try {
                     await rest.put(route, { body: interactionList });
                     const msg = `Dev commands registered to ${id}!`;
                     if (int) {
-                        await int.reply({ content: undeploy ? "Dev commands cleared!" : id === int.guild.id ? "Dev commands registered!" : msg, ephemeral: true });
+                        await int.followUp({ content: undeploy ? "Dev commands cleared!" : id === int.guild.id ? "Dev commands registered!" : msg, flags: [Discord.MessageFlags.Ephemeral] });
                     } else {
                         console.info(msg);
                     }
@@ -186,12 +187,19 @@ module.exports = {
                 } catch (e) {
                     console.error(`Error deploying dev commands to ${id}: ${e.message}`);
                     if (int) {
-                        await int.reply({ content: `Error deploying dev commands to ${id}: ${e.message}`, ephemeral: true });
+                        await int.followUp({ content: `Error deploying dev commands to ${id}: ${e.message}`, flags: [Discord.MessageFlags.Ephemeral] });
                     } else {
                         console.error(`No interaction to reply to for dev deploy on ${id}: ${e.message}`);
                     }
                 }
+            });
+
+            if (int) {
+                await Promise.all(promises);
+                if (!isPublic) {
+                    await int.editReply({ content: `Successfully deployed/cleared dev commands to ${serverIDs.length} server(s).`, flags: [Discord.MessageFlags.Ephemeral] });
+                }
             }
         }
     }
-};
+};git
