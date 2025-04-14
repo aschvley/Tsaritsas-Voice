@@ -117,3 +117,9 @@ TsaritsasVoice/
 	Lore-based announcements and mini-RP tools
 - 🎯 Add leaderboard UI to the web dashboard
 - 🔮 Create command aliases for style and flavor (e.g., /obey, /hergrace)
+
+## 👤 Author
+Created by: ashcvley
+Discord: ashcvley
+Project Name: Tsaritsa's Voice
+> “May Her Grace guide your every message.” ❄️
