@@ -82,18 +82,20 @@ module.exports = {
         if (!undeploy) client.commands.forEach(cmd => {
             let metadata = cmd.metadata;
             let commandData;
+            let commandName = cmd.metadata?.name?.toLowerCase() || cmd.data?.name;
 
             if (!metadata) {
                 // Asumir que usa la propiedad 'data' de SlashCommandBuilder
                 if (cmd.data instanceof DiscordBuilders.SlashCommandBuilder) {
                     commandData = cmd.data.toJSON();
+                    commandName = commandData.name;
                 } else {
                     console.warn(`Comando ${cmd.name || '(sin nombre)'} no tiene 'metadata' ni un 'data' válido.`);
                     return;
                 }
             } else {
                 commandData = {
-                    name: metadata.name.toLowerCase(),
+                    name: commandName,
                     description: metadata.description,
                     type: metadata.type === "user_context" ? 2 : metadata.type === "message_context" ? 3 : 1 // 1 para SLASH
                 };
@@ -103,24 +105,28 @@ module.exports = {
                 else if (metadata.permission) commandData.default_member_permissions = String(Discord.PermissionsBitField.resolve(Discord.PermissionFlagsBits[metadata.permission]));
             }
 
-            if (isPublic && metadata?.dev) return;
-            else if (!isPublic && metadata?.dev === false && commandData.type === 1) return; // Solo omitir slash dev commands si no es público
+            // Ignorar comandos que no son slash para el despliegue global
+            if (isPublic && metadata?.dev && commandData?.type === 1) return;
+            else if (!isPublic && metadata?.dev === false && commandData?.type === 1) return;
 
-            switch (commandData.type) {
-                case 2: case 3: // context menu
-                    interactionList.push(commandData);
-                    break;
+            // Solo procesar comandos slash aquí
+            if (commandData?.type === 1) {
+                // Si el nombre del comando tiene el prefijo 'button:', extraer solo la parte después
+                const normalizedName = commandName?.startsWith('button:') ? commandName.split(':')[1] : commandName;
 
-                case 1: // slash commands
+                if (normalizedName) {
                     let data = new DiscordBuilders.SlashCommandBuilder()
-                        .setName(commandData.name)
-                        .setDescription(commandData.description);
+                        .setName(normalizedName)
+                        .setDescription(commandData.description || 'Sin descripción'); // Asegurarse de tener una descripción
+
                     if (commandData.default_member_permissions) data.setDefaultMemberPermissions(commandData.default_member_permissions);
                     if (metadata?.args) metadata.args.forEach(arg => {
                         createSlashArg(data, arg);
                     });
                     interactionList.push(data.toJSON());
-                    break;
+                } else {
+                    console.warn(`No se pudo normalizar el nombre del comando: ${commandName}`);
+                }
             }
         });
 
