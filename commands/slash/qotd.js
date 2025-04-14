@@ -11,8 +11,16 @@ module.exports = {
     ),
 
   async run(interaction) {
+    // Get the 'question' option from the interaction
     const question = interaction.options.getString('question');
-    const qotdChannel = interaction.client.channels.cache.get('1305245878877028512'); // Replace with your actual QOTD channel ID
+    
+    // Check if the question exists
+    if (!question) {
+      return interaction.reply({ content: 'No question was provided!', ephemeral: true });
+    }
+
+    // Get the QOTD channel by ID
+    const qotdChannel = interaction.client.channels.cache.get('YOUR_PUBLIC_CHANNEL_ID'); // Replace with your actual QOTD channel ID
 
     if (!qotdChannel) {
       return interaction.reply({ content: 'QOTD channel not found.', ephemeral: true });
@@ -27,20 +35,28 @@ module.exports = {
       }
     };
 
-    const message = await qotdChannel.send({ embeds: [embed] });
+    try {
+      // Send the question to the QOTD channel
+      const message = await qotdChannel.send({ embeds: [embed] });
 
-    const thread = await message.startThread({
-      name: "Discuss the Tsaritsa's question here",
-      autoArchiveDuration: 1440,
-      reason: 'QOTD Thread'
-    });
+      // Create a thread for the message
+      const thread = await message.startThread({
+        name: "Discuss the Tsaritsa's question here",
+        autoArchiveDuration: 1440,
+        reason: 'QOTD Thread'
+      });
 
-    // Resend the same embed in the thread
-    await thread.send({ embeds: [embed] });
+      // Resend the same embed in the thread
+      await thread.send({ embeds: [embed] });
 
-    // Follow-up message from the bot
-    await thread.send("Answer the inquiry here, our Majesty will be reading you attentively ❄️");
+      // Add a follow-up message in the thread
+      await thread.send("Answer the inquiry here, our Majesty will be reading you attentively ❄️");
 
-    await interaction.reply({ content: `Question posted in ${qotdChannel}! ✅`, ephemeral: true });
+      // Reply to the user confirming that the question was posted
+      await interaction.reply({ content: `Question posted in ${qotdChannel}! ✅`, ephemeral: true });
+    } catch (error) {
+      console.error("Error in the QOTD command:", error);
+      await interaction.reply({ content: 'There was an error posting the QOTD.', ephemeral: true });
+    }
   }
 };
