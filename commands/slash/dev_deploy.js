@@ -121,7 +121,7 @@ module.exports = {
     },
 
     async run(client, int, tools) {
-        let isPublic = int && !!int.options.get("global")?.value;
+        let isPublic = int && (int.options.get("global")?.value === true);
         let undeploy = int && !!int.options.get("undeploy")?.value;
         let targetServer = (!int || isPublic) ? null : int.options.get("server_id")?.value;
 
