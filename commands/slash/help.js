@@ -1,10 +1,10 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 
 module.exports = {
-    data: new SlashCommandBuilder()
-        .setName('help')
-        .setDescription('Displays a list of all available commands.'),
-
+  metadata: {
+      name: 'help',
+      description: 'Displays a list of all available commands',
+  },
     async run(client, interaction, tools) { // Modificamos la firma de la función run para aceptar los tres argumentos
         try {
             // Crear el embed para el comando de ayuda
