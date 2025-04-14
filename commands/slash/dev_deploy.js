@@ -91,7 +91,7 @@ module.exports = {
         args: [
             { type: "bool", name: "global", description: "Publish the public global commands instead of dev ones", required: false },
             { type: "string", name: "server_id", description: "Deploy dev commands to a specific server", required: false },
-            { type: "bool", name: "undeploy", description: "Clears all dev commands from the server (or global if it's set to true)", required: false }    
+            { type: "bool", name: "undeploy", description: "Clears all dev commands from the server (or global if it's set to true)", required: false }
         ]
     },
 
@@ -103,31 +103,50 @@ module.exports = {
         let targetServer = (!int || isPublic) ? null : int.options.get("server_id")?.value;
 
         let interactionList = [];
+
         if (!undeploy) {
             client.commands.forEach(cmd => {
-                let metadata = cmd.metadata;
+                const metadata = cmd.metadata;
                 if (isPublic && metadata.dev) return;
                 else if (!isPublic && !metadata.dev) return;
 
-                switch (metadata.type) {
-                    case "user_context":
-                    case "message_context": // context menu, user
-                        let ctx = { name: metadata.name, type: metadata.type == "user_context" ? 2 : 3, dm_permission: !!metadata.dm, contexts: [0] };
-                        interactionList.push(ctx);
-                        break;
+                try {
+                    switch (metadata.type) {
+                        case "user_context":
+                        case "message_context":
+                            let ctx = {
+                                name: String(metadata.name),
+                                type: metadata.type === "user_context" ? 2 : 3,
+                                dm_permission: !!metadata.dm,
+                                contexts: [0]
+                            };
+                            interactionList.push(ctx);
+                            break;
 
-                    case "slash": // slash commands
-                        let data = new DiscordBuilders.SlashCommandBuilder();
-                        data.setName(metadata.name.toLowerCase());
-                        data.setContexts([0]);
-                        if (metadata.dev) data.setDefaultMemberPermissions(0);
-                        else if (metadata.permission) data.setDefaultMemberPermissions(Discord.PermissionFlagsBits[metadata.permission]);
-                        if (metadata.description) data.setDescription(metadata.description);
-                        if (metadata.args) metadata.args.forEach(arg => {
-                            return createSlashArg(data, arg);
-                        });
-                        interactionList.push(data.toJSON());
-                        break;
+                        case "slash":
+                            let data = new DiscordBuilders.SlashCommandBuilder();
+                            data.setName(String(metadata.name).toLowerCase());
+                            data.setDescription(String(metadata.description || "No description provided"));
+                            data.setContexts([0]);
+
+                            if (metadata.dev) {
+                                data.setDefaultMemberPermissions(0);
+                            } else if (metadata.permission) {
+                                data.setDefaultMemberPermissions(Discord.PermissionFlagsBits[metadata.permission]);
+                            }
+
+                            if (metadata.args) {
+                                metadata.args.forEach(arg => {
+                                    createSlashArg(data, arg);
+                                });
+                            }
+
+                            interactionList.push(data.toJSON());
+                            break;
+                    }
+                } catch (err) {
+                    console.error(`❌ Error al procesar el comando "${metadata.name}"`);
+                    console.error(err);
                 }
             });
         }
