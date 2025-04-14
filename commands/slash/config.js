@@ -1,50 +1,85 @@
 module.exports = {
-metadata: {
-    permission: "ManageGuild",
-    name: "config",
-    description: "Toggle XP gain, or visit the dashboard to tweak server settings. (requires manage server permission)",
-},
+    metadata: {
+        permission: "ManageGuild",
+        name: "config",
+        description: "Toggle XP gain, or visit the dashboard to tweak server settings. (requires manage server permission)",
+    },
 
-async run(client, int, tools) {
+    async run(client, int, tools) {
+        const { settings } = await tools.fetchSettings();
 
-    let db = await tools.fetchSettings()
-    let settings = db.settings
-    if (!tools.canManageServer(int.member, db.settings.manualPerms)) return tools.warn("*notMod")
+        if (!tools.canManageServer(int.member, db.settings.manualPerms)) {
+            return tools.warn("*notMod");
+        }
 
-    let polarisSettings = [
-        `**✨ XP enabled: __${settings.enabled ? "Yes!" : "No!"}__**`,
-        `**XP per message:** ${settings.gain.min == settings.gain.max ? tools.commafy(settings.gain.min) : `${tools.commafy(settings.gain.min)} - ${tools.commafy(settings.gain.max)}`}`,
-        `**XP cooldown:** ${tools.commafy(settings.gain.time)} ${tools.extraS("sec", settings.gain.time)}`,
-        `**XP curve:** ${settings.curve[3]}x³ + ${settings.curve[2]}x² + ${settings.curve[1]}x`,
-        `**Level up message:** ${settings.levelUp.enabled && settings.levelUp.message ? (settings.levelUp.embed ? "Enabled (embed)" : "Enabled") : "Disabled"}`,
-        `**Rank cards:** ${settings.rankCard.disabled ? "Disabled" : settings.rankCard.ephemeral ? "Enabled (forced hidden)" : "Enabled"}`,
-        `**Leaderboard:** ${settings.leaderboard.disabled ? "Disabled" : `[${settings.leaderboard.private ? "Private" : "Public"}](<${tools.WEBSITE}/leaderboard/${int.guild.id}>)`}`
-    ]
+        let xpRange;
+        if (settings.gain.min === settings.gain.max) {
+            xpRange = tools.commafy(settings.gain.min);
+        } else {
+            xpRange = `${tools.commafy(settings.gain.min)} - ${tools.commafy(settings.gain.max)}`;
+        }
 
-    let embed = tools.createEmbed({
-        author: { name: "Settings for " + int.guild.name, iconURL: int.guild.iconURL() },
-        footer: "Visit the online dashboard to change server settings",
-        color: tools.COLOR, timestamp: true,
-        description: polarisSettings.join("\n")
-    })
+        let leaderboardStatus;
+        if (settings.leaderboard.disabled) {
+            leaderboardStatus = "Disabled";
+        } else {
+            leaderboardStatus = `[${settings.leaderboard.private ? "Private" : "Public"}](<${tools.WEBSITE}/leaderboard/${int.guild.id}>)`;
+        }
 
-    let toggleButton = settings.enabled ?
-      {style: "Danger", label: "Disable XP", emoji: "❕", customId: "toggle_xp" }
-    : {style: "Success", label: "Enable XP", emoji: "✨", customId: "toggle_xp" }
+        let polarisSettings = [
+            `**✨ XP enabled: __${settings.enabled ? "Yes!" : "No!"}__**`,
+            `**XP per message:** ${xpRange}`,
+            `**XP cooldown:** ${tools.commafy(settings.gain.time)} ${tools.extraS("sec", settings.gain.time)}`,
+            `**XP curve:** ${settings.curve[3]}x³ + ${settings.curve[2]}x² + ${settings.curve[1]}x`,
+            `**Level up message:** ${settings.levelUp.enabled && settings.levelUp.message ? (settings.levelUp.embed ? "Enabled (embed)" : "Enabled") : "Disabled"}`,
+            `**Rank cards:** ${settings.rankCard.disabled ? "Disabled" : settings.rankCard.ephemeral ? "Enabled (forced hidden)" : "Enabled"}`,
+            `**Leaderboard:** ${leaderboardStatus}`
+        ];
 
-    let buttons = tools.button([
-        {style: "Success", label: "Edit Settings", emoji: "🛠", customID: "settings_list"},
-        toggleButton,
-        {style: "Link", label: "Edit Online", emoji: "🌎", url: `${tools.WEBSITE}/settings/${int.guild.id}`},
-        {style: "Secondary", label: "Export Data", emoji: "⏏️", customId: "export_xp"}
-    ])
+        let embed = tools.createEmbed({
+            author: { name: "Settings for " + int.guild.name, iconURL: int.guild.iconURL() },
+            footer: "Visit the online dashboard to change server settings",
+            color: tools.COLOR, timestamp: true,
+            description: polarisSettings.join("\n")
+        });
 
-    let listButtons = tools.button([
-        {style: "Primary", label: `Reward Roles (${settings.rewards.length})`, customId: "list_reward_roles"},
-        {style: "Primary", label: `Role Multipliers (${settings.multipliers.roles.length})`, customId: "list_multipliers~roles"},
-        {style: "Primary", label: `Channel Multipliers (${settings.multipliers.channels.length})`, customId: "list_multipliers~channels"}
-    ])
+        // Refactor toggleButton with independent variables
+        let toggleButtonStyle, toggleButtonLabel, toggleButtonEmoji;
+        if (settings.enabled) {
+            toggleButtonStyle = "Danger";
+            toggleButtonLabel = "Disable XP";
+            toggleButtonEmoji = "❕";
+        } else {
+            toggleButtonStyle = "Success";
+            toggleButtonLabel = "Enable XP";
+            toggleButtonEmoji = "✨";
+        }
 
-    return int.reply({embeds: [embed], components: [tools.row(buttons)[0], tools.row(listButtons)[0]]})
+        let toggleButton = {
+            style: toggleButtonStyle,
+            label: toggleButtonLabel,
+            emoji: toggleButtonEmoji,
+            customId: "toggle_xp"
+        };
 
-}}
+        // Refactor listButtons with independent variables
+        let rewardRolesLabel = `Reward Roles (${settings.rewards.length})`;
+        let roleMultipliersLabel = `Role Multipliers (${settings.multipliers.roles.length})`;
+        let channelMultipliersLabel = `Channel Multipliers (${settings.multipliers.channels.length})`;
+
+        let listButtons = tools.button([
+            { style: "Primary", label: rewardRolesLabel, customId: "list_reward_roles" },
+            { style: "Primary", label: roleMultipliersLabel, customId: "list_multipliers~roles" },
+            { style: "Primary", label: channelMultipliersLabel, customId: "list_multipliers~channels" }
+        ]);
+
+        let buttons = tools.button([
+            { style: "Success", label: "Edit Settings", emoji: "🛠", customID: "settings_list" },
+            toggleButton,
+            { style: "Link", label: "Edit Online", emoji: "🌎", url: `${tools.WEBSITE}/settings/${int.guild.id}` },
+            { style: "Secondary", label: "Export Data", emoji: "⏏️", customId: "export_xp" }
+        ]);
+
+        return int.reply({ embeds: [embed], components: [tools.row(buttons)[0], tools.row(listButtons)[0]] });
+    }
+};
