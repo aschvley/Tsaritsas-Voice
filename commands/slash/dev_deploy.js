@@ -114,8 +114,8 @@ module.exports = {
                 try {
                     switch (metadata.type) {
                         case "user_context":
-                        case "message_context":
-                            let ctx = {
+                        case "message_context": {
+                            const ctx = {
                                 name: String(metadata.name),
                                 type: metadata.type === "user_context" ? 2 : 3,
                                 dm_permission: !!metadata.dm,
@@ -123,12 +123,12 @@ module.exports = {
                             };
                             interactionList.push(ctx);
                             break;
-
-                        case "slash":
-                            let data = new DiscordBuilders.SlashCommandBuilder();
-                            data.setName(String(metadata.name).toLowerCase());
-                            data.setDescription(String(metadata.description || "No description provided"));
-                            data.setContexts([0]);
+                        }
+                        case "slash": {
+                            const data = new DiscordBuilders.SlashCommandBuilder()
+                                .setName(String(metadata.name).toLowerCase())
+                                .setDescription(String(metadata.description || "No description provided"))
+                                .setContexts([0]);
 
                             if (metadata.dev) {
                                 data.setDefaultMemberPermissions(0);
@@ -144,6 +144,7 @@ module.exports = {
 
                             interactionList.push(data.toJSON());
                             break;
+                        }
                     }
                 } catch (err) {
                     console.error(`❌ Error al procesar el comando "${metadata.name}"`);
@@ -166,21 +167,31 @@ module.exports = {
                 await int.editReply(`Error deploying global commands: ${e.message}`); // Responder con el error
             }
         } else {
-            let serverIDs = targetServer ? [targetServer] : (int?.guild) ? [int.guild.id] : config.test_server_ids;
-            if (!serverIDs) return console.warn("Cannot deploy dev commands! No test server IDs provided in config.");
+            const serverIDs = targetServer ? [targetServer] : (int?.guild) ? [int.guild.id] : config.test_server_ids;
+            if (!serverIDs) {
+                return console.warn("Cannot deploy dev commands! No test server IDs provided in config.");
+            }
 
-            serverIDs.forEach(async id => { // Usar async/await dentro del forEach para secuenciar (opcional, pero más seguro)
+            for (const id of serverIDs) { // Usar for...of para un mejor manejo de async/await
                 const route = Routes.applicationGuildCommands(process.env.DISCORD_ID, id);
                 try {
                     await rest.put(route, { body: interactionList });
-                    let msg = `Dev commands registered to ${id}!`;
-                    await int.reply({ content: undeploy ? "Dev commands cleared!" : id == int.guild.id ? "Dev commands registered!" : msg, ephemeral: true }); // Responder individualmente por servidor
-                    client.shard.broadcastEval(cl => { cl.application.commands.fetch(); return });
+                    const msg = `Dev commands registered to ${id}!`;
+                    if (int) {
+                        await int.reply({ content: undeploy ? "Dev commands cleared!" : id === int.guild.id ? "Dev commands registered!" : msg, ephemeral: true });
+                    } else {
+                        console.info(msg);
+                    }
+                    client.shard.broadcastEval(cl => cl.application?.commands?.fetch());
                 } catch (e) {
                     console.error(`Error deploying dev commands to ${id}: ${e.message}`);
-                    await int.reply({ content: `Error deploying dev commands to ${id}: ${e.message}`, ephemeral: true }); // Responder con el error
+                    if (int) {
+                        await int.reply({ content: `Error deploying dev commands to ${id}: ${e.message}`, ephemeral: true });
+                    } else {
+                        console.error(`No interaction to reply to for dev deploy on ${id}: ${e.message}`);
+                    }
                 }
-            });
+            }
         }
     }
 };
