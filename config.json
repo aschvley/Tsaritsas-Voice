@@ -1,7 +1,7 @@
 {
   "test_server_ids": ["1156362555825065994"],
 
-  "developer_ids": ["1135568788985749554, 1075461907651240017"],
+  "developer_ids": ["1135568788985749554"],
 
   "lockBotToDevOnly": false,
   
