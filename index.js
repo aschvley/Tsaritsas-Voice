@@ -156,7 +156,14 @@ client.on("interactionCreate", async int => {
     else if (config.lockBotToDevOnly && !tools.isDev()) return tools.warn("Only developers can use this bot!");
 
     try {
-        if (foundCommand) await foundCommand.run(client, int, tools);
+        if (foundCommand) {
+            // Pasar client.db al comando si es el comando "config"
+            if (foundCommand.metadata.name === 'config') {
+                await foundCommand.run(client, int, tools, client.db);
+            } else {
+                await foundCommand.run(client, int, tools);
+            }
+        }
     } catch (e) {
         console.error(e);
         int.reply({ content: "**Error!** " + e.message, ephemeral: true });

@@ -5,10 +5,10 @@ module.exports = {
         description: "Toggle XP gain, or visit the dashboard to tweak server settings. (requires manage server permission)",
     },
 
-    async run(client, int, tools) {
-        const { settings } = await tools.fetchSettings();
+    async run(client, int, tools, db) { // <-- Recibe 'db' como cuarto argumento
+        const { settings } = await db.get(int.guild.id) || { settings: {} }; // Usa 'db' directamente aquí
 
-        if (!tools.canManageServer(int.member, db.settings.manualPerms)) {
+        if (!tools.canManageServer(int.member, settings.manualPerms)) {
             return tools.warn("*notMod");
         }
 
