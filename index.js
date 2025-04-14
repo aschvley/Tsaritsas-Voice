@@ -109,6 +109,7 @@ client.on("messageCreate", async message => {
     else {
         // --- MANEJO DE MENCIONES ---
         if (message.mentions.has(client.user.id)) {
+            console.log("¡El bot fue mencionado!"); // Agrega esta línea
             const mentionerId = message.author.id;
 
             if (autoResponses[mentionerId]) {
