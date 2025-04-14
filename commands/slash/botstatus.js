@@ -30,12 +30,8 @@ async run(client, int, tools) {
     })
 
     let infoButtons = [{style: "Link", label: "Website", url: `${tools.WEBSITE}`}]
-    if (config.changelogURL) {
-      infoButtons.push({style: "Link", label: "Changelog", url: config.changelogURL})
-    }
-    if (config.supportURL) {
-      infoButtons.push({style: "Link", label: "Support", url: config.supportURL})
-    }
+    if (config.changelogURL) infoButtons.push({style: "Link", label: "Changelog", url: config.changelogURL})
+    if (config.supportURL) infoButtons.push({style: "Link", label: "Support", url: config.supportURL})
 
     int.reply({embeds: [embed], components: tools.row(tools.button(infoButtons)), fetchReply: true}).then(msg => {
         embed.setFooter({ text: `Ping: ${tools.commafy(msg.createdTimestamp - int.createdAt)}ms`})
