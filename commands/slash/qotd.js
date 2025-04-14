@@ -11,6 +11,7 @@ module.exports = {
         ),
     async run(client, interaction, tools) {
         try {
+            // La pregunta ahora se obtiene directamente de la interacción
             const question = interaction.options.getString('question');
             const qotdChannel = client.channels.cache.get('1305245878877028512');
 
@@ -21,7 +22,7 @@ module.exports = {
             const embed = new EmbedBuilder()
                 .setTitle('`QOTD`')
                 .setDescription(`# ${question}`)
-                .setColor('#93caf6') // Establecer el color aquí
+                .setColor('#93caf6')
                 .setFooter({ text: 'Reply in the thread below 👇' });
 
             const message = await qotdChannel.send({ embeds: [embed] });
@@ -32,11 +33,10 @@ module.exports = {
                 reason: 'QOTD Thread'
             });
 
-            // Eliminar el envío duplicado del embed al hilo
-            await thread.send("Answer the inquiry here, our Majesty will be reading you attentively❄️");
+            await thread.send("Answer the inquiry here, our Majesty will be reading you attentively ❄️");
 
-            // Responder a la interacción DESPUÉS de enviar el mensaje al canal
-            await interaction.reply({ content: `Question posted in ${qotdChannel}! ✅`, ephemeral: true });
+            // Usamos el nombre del canal directamente desde el objeto qotdChannel
+            await interaction.reply({ content: `Question posted in ${qotdChannel.name}! ✅`, ephemeral: true });
 
         } catch (error) {
             console.error(error);
