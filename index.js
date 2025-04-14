@@ -67,10 +67,10 @@ client.updateStatus = function() {
 
 let autoResponses = {};
 
-// Cargar las respuestas automáticas al iniciar el bot
-async function loadAutoResponses() {
+// Cargar las respuestas automáticas al iniciar el bot (SÍNCRONO)
+function loadAutoResponses() {
     try {
-        const data = await fs.readFile('./auto_responses.json', 'utf8');
+        const data = fs.readFileSync('./auto_responses.json', 'utf8');
         autoResponses = JSON.parse(data);
         console.log('Respuestas automáticas cargadas.');
     } catch (error) {
