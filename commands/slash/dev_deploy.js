@@ -85,7 +85,6 @@ module.exports = {
             let commandName = cmd.metadata?.name?.toLowerCase() || cmd.data?.name;
 
             if (!metadata) {
-                // Asumir que usa la propiedad 'data' de SlashCommandBuilder
                 if (cmd.data instanceof DiscordBuilders.SlashCommandBuilder) {
                     commandData = cmd.data.toJSON();
                     commandName = commandData.name;
@@ -111,13 +110,12 @@ module.exports = {
 
             // Solo procesar comandos slash aquí
             if (commandData?.type === 1) {
-                // Si el nombre del comando tiene el prefijo 'button:', extraer solo la parte después
                 const normalizedName = commandName?.startsWith('button:') ? commandName.split(':')[1] : commandName;
 
                 if (normalizedName) {
                     let data = new DiscordBuilders.SlashCommandBuilder()
                         .setName(normalizedName)
-                        .setDescription(commandData.description || 'Sin descripción'); // Asegurarse de tener una descripción
+                        .setDescription(commandData.description || 'Sin descripción');
 
                     if (commandData.default_member_permissions) data.setDefaultMemberPermissions(commandData.default_member_permissions);
                     if (metadata?.args) metadata.args.forEach(arg => {
@@ -134,7 +132,7 @@ module.exports = {
 
         try {
             if (isPublic && int) {
-                const route = Routes.applicationCommands(process.env.DISCORD_ID);
+                const route = Routes.applicationCommands(client.application.id); // <-- CORRECCIÓN AQUÍ
                 await rest.put(route, { body: interactionList });
                 await int.editReply({ content: `**${!undeploy ? `${interactionList.length} global commands registered!` : "Global commands cleared!"}** (Wait a bit, or refresh with Ctrl+R to see changes)`, flags: [Discord.MessageFlags.Ephemeral] });
                 client.shard.broadcastEval(cl => cl.application?.commands?.fetch());
@@ -142,7 +140,7 @@ module.exports = {
                 const serverIDs = targetServer ? [targetServer] : (int?.guild) ? [int.guild.id] : config.test_server_ids;
                 if (serverIDs) {
                     for (const id of serverIDs) {
-                        const route = Routes.applicationGuildCommands(process.env.DISCORD_ID, id);
+                        const route = Routes.applicationGuildCommands(client.application.id, id); // Usar client.application.id aquí también por consistencia
                         await rest.put(route, { body: interactionList });
                         const msg = `Dev commands registered to ${id}!`;
                         await int.followUp({ content: undeploy ? "Dev commands cleared!" : id === int.guild.id ? "Dev commands registered!" : msg, flags: [Discord.MessageFlags.Ephemeral] });
