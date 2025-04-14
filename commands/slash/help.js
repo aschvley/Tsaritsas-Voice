@@ -7,11 +7,7 @@ module.exports = {
 
   async run(interaction) {
     try {
-      // Verificar si la interacción es de tipo Slash
-      if (!interaction.isCommand()) {
-        return console.error("No es una interacción de tipo Slash Command");
-      }
-
+      // Crear el embed para el comando de ayuda
       const embed = new EmbedBuilder()
         .setTitle("Tsaritsa's Voice — Command List ❄️")
         .setColor(0x91c9f7)
@@ -40,21 +36,14 @@ module.exports = {
         )
         .setFooter({ text: "Type a command with / to use it." });
 
-      // Verificar si la interacción ya ha sido respondida
-      if (!interaction.deferred) {
-        await interaction.deferReply(); // Defer if needed
-      }
-
-      // Enviar el mensaje
-      await interaction.editReply({ embeds: [embed] });
+      // Responder con el embed usando interaction.reply()
+      await interaction.reply({ embeds: [embed], ephemeral: true });
 
     } catch (error) {
-      console.error("Error in the Help command:", error);
-      if (interaction.deferred) {
-        await interaction.editReply({ content: 'There was an error displaying the help command.', ephemeral: true });
-      } else {
-        await interaction.reply({ content: 'There was an error displaying the help command.', ephemeral: true });
-      }
+      console.error("Error en el comando Help:", error);
+
+      // Si ocurrió un error, responder con un mensaje de error
+      await interaction.reply({ content: 'Hubo un error al mostrar los comandos.', ephemeral: true });
     }
   }
 };
