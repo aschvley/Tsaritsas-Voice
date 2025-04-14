@@ -81,24 +81,43 @@ module.exports = {
         let interactionList = [];
         if (!undeploy) client.commands.forEach(cmd => {
             let metadata = cmd.metadata;
-            if (isPublic && metadata.dev) return;
-            else if (!isPublic && !metadata.dev) return;
+            let commandData;
 
-            switch (metadata.type) {
-                case "user_context": case "message_context":
-                    let ctx = { name: metadata.name, type: metadata.type == "user_context" ? 2 : 3, dm_permission: !!metadata.dm, contexts: [0] };
-                    interactionList.push(ctx);
+            if (!metadata) {
+                // Asumir que usa la propiedad 'data' de SlashCommandBuilder
+                if (cmd.data instanceof DiscordBuilders.SlashCommandBuilder) {
+                    commandData = cmd.data.toJSON();
+                } else {
+                    console.warn(`Comando ${cmd.name || '(sin nombre)'} no tiene 'metadata' ni un 'data' válido.`);
+                    return;
+                }
+            } else {
+                commandData = {
+                    name: metadata.name.toLowerCase(),
+                    description: metadata.description,
+                    type: metadata.type === "user_context" ? 2 : metadata.type === "message_context" ? 3 : 1 // 1 para SLASH
+                };
+                if (metadata.dm) commandData.dm_permission = true;
+                if (metadata.contexts) commandData.contexts = metadata.contexts;
+                if (metadata.dev) commandData.default_member_permissions = "0";
+                else if (metadata.permission) commandData.default_member_permissions = String(Discord.PermissionsBitField.resolve(Discord.PermissionFlagsBits[metadata.permission]));
+            }
+
+            if (isPublic && metadata?.dev) return;
+            else if (!isPublic && metadata?.dev === false && commandData.type === 1) return; // Solo omitir slash dev commands si no es público
+
+            switch (commandData.type) {
+                case 2: case 3: // context menu
+                    interactionList.push(commandData);
                     break;
 
-                case "slash":
+                case 1: // slash commands
                     let data = new DiscordBuilders.SlashCommandBuilder()
-                        .setName(metadata.name.toLowerCase())
-                        .setContexts([0]);
-                    if (metadata.dev) data.setDefaultMemberPermissions(0);
-                    else if (metadata.permission) data.setDefaultMemberPermissions(Discord.PermissionFlagsBits[metadata.permission]);
-                    if (metadata.description) data.setDescription(metadata.description);
-                    if (metadata.args) metadata.args.forEach(arg => {
-                        return createSlashArg(data, arg);
+                        .setName(commandData.name)
+                        .setDescription(commandData.description);
+                    if (commandData.default_member_permissions) data.setDefaultMemberPermissions(commandData.default_member_permissions);
+                    if (metadata?.args) metadata.args.forEach(arg => {
+                        createSlashArg(data, arg);
                     });
                     interactionList.push(data.toJSON());
                     break;
@@ -111,7 +130,7 @@ module.exports = {
             if (isPublic && int) {
                 const route = Routes.applicationCommands(process.env.DISCORD_ID);
                 await rest.put(route, { body: interactionList });
-                await int.editReply(`**${!undeploy ? `${interactionList.length} global commands registered!` : "Global commands cleared!"}** (Wait a bit, or refresh with Ctrl+R to see changes)`);
+                await int.editReply({ content: `**${!undeploy ? `${interactionList.length} global commands registered!` : "Global commands cleared!"}** (Wait a bit, or refresh with Ctrl+R to see changes)`, flags: [Discord.MessageFlags.Ephemeral] });
                 client.shard.broadcastEval(cl => cl.application?.commands?.fetch());
             } else if (int) {
                 const serverIDs = targetServer ? [targetServer] : (int?.guild) ? [int.guild.id] : config.test_server_ids;
@@ -122,17 +141,17 @@ module.exports = {
                         const msg = `Dev commands registered to ${id}!`;
                         await int.followUp({ content: undeploy ? "Dev commands cleared!" : id === int.guild.id ? "Dev commands registered!" : msg, flags: [Discord.MessageFlags.Ephemeral] });
                     }
-                    await int.editReply(`Successfully deployed/cleared dev commands to ${serverIDs.length} server(s).`);
+                    await int.editReply({ content: `Successfully deployed/cleared dev commands to ${serverIDs.length} server(s).`, flags: [Discord.MessageFlags.Ephemeral] });
                 } else {
                     console.warn("Cannot deploy dev commands! No test server IDs provided in config.");
-                    if (int) await int.editReply("Cannot deploy dev commands! No test server IDs provided in config.");
+                    if (int) await int.editReply({ content: "Cannot deploy dev commands! No test server IDs provided in config.", flags: [Discord.MessageFlags.Ephemeral] });
                 }
             } else {
                 console.warn("El comando 'deploy' se ejecutó sin una interacción válida.");
             }
         } catch (e) {
             console.error(`Error deploying commands: ${e.message}`);
-            if (int) await int.editReply(`Error deploying commands: ${e.message}`);
+            if (int) await int.editReply({ content: `Error deploying commands: ${e.message}`, flags: [Discord.MessageFlags.Ephemeral] });
         }
     }
 };

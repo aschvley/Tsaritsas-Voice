@@ -66,7 +66,8 @@ client.on("ready", () => {
     .then(cmds => {
         if (cmds.size < 1) { // no commands!! deploy to test server
             console.info("!!! No global commands found, deploying dev commands to test server (Use /deploy global=true to deploy global commands)")
-            client.commands.get("deploy").run(client, null, client.globalTools)
+            // **COMENTADA LA LÍNEA QUE EJECUTABA DEPLOY AUTOMÁTICAMENTE:**
+            // client.commands.get("deploy").run(client, null, client.globalTools)
         }
     })
 
@@ -86,9 +87,9 @@ client.on("messageCreate", async message => {
 
 // on interaction
 client.on("interactionCreate", async int => {
-    
+
     if (!int.guild) return int.reply("You can't use commands in DMs!")
-        
+
     // for setting changes
     if (int.isStringSelectMenu()) {
         if (int.customId.startsWith("configmenu_")) {
