@@ -12,19 +12,26 @@ metadata: {
 
 async run(client, int, tools) {
 
-    let member = int.member
+    let {member} = int
     let foundUser = int.options.get("member") 
-    if (foundUser) member = foundUser.member
+    if (foundUser) {
+      member = foundUser.member
+    }
 
     let db = await tools.fetchSettings(member.id)
-    if (!db) return tools.warn("*noData")
-    else if (!db.settings.enabled) return tools.warn("*xpDisabled")
+    if (!db) {
+      return tools.warn("*noData")
+    } else if (!db.settings.enabled) {
+             return tools.warn("*xpDisabled")
+           }
 
     let targetLevel = Math.min(int.options.get("target").value, db.settings.maxLevel)
     let targetXP = tools.xpForLevel(targetLevel, db.settings)
     
     let cardCol = db.settings.rankCard.embedColor
-    if (cardCol == -1) cardCol = null
+    if (cardCol == -1) {
+      cardCol = null
+    }
 
     if (db.settings.rankCard.disabled) {
         let miniEmbed = tools.createEmbed({
@@ -37,8 +44,10 @@ async run(client, int, tools) {
     }
 
     let currentXP = db.users[member.id]
-    if (!currentXP || !currentXP.xp) return tools.noXPYet(foundUser ? foundUser.user : int.user)
-    let xp = currentXP.xp
+    if (!currentXP || !currentXP.xp) {
+      return tools.noXPYet(foundUser ? foundUser.user : int.user)
+    }
+    let {xp} = currentXP
     let userLevel = tools.getLevel(xp, db.settings)
 
     let remaining = targetXP - xp
@@ -49,11 +58,15 @@ async run(client, int, tools) {
     let barRepeat = Math.min(barSize, Math.round(percent / (100 / barSize)))
     let progressBar = `${"▓".repeat(barRepeat)}${"░".repeat(barSize - barRepeat)} (${Number(percent.toFixed(2))}%)`
 
-    if (targetLevel == userLevel && userLevel >= db.settings.maxLevel) progressBar += `\n🎉 You reached the maximum level${db.settings.maxLevel < 1000 ? " in this server" : ""}! Congratulations!`
+    if (targetLevel == userLevel && userLevel >= db.settings.maxLevel) {
+      progressBar += `\n🎉 You reached the maximum level${db.settings.maxLevel < 1000 ? " in this server" : ""}! Congratulations!`
+    }
 
     let multiplierData = tools.getMultiplier(member, db.settings)
     let multiplier = multiplierData.multiplier || multiplierData.role
-    if (multiplier <= 0) return int.reply("Your multiplier prevents you from gaining any XP!")
+    if (multiplier <= 0) {
+      return int.reply("Your multiplier prevents you from gaining any XP!")
+    }
 
     let estimatedMin = Math.ceil(remaining / (db.settings.gain.min * multiplier))
     let estimatedMax = Math.ceil(remaining / (db.settings.gain.max * multiplier))
@@ -68,12 +81,14 @@ async run(client, int, tools) {
         `**Remaining XP: **${reached? "0 (" : ""}${tools.commafy(targetXP - xp)}${reached ? ")" : ""}`
     ]
 
-    if (!reached) levelDetails = levelDetails.concat([
-        "",
-        `**XP per message: **${db.settings.gain.min == db.settings.gain.max ? tools.commafy(Math.round(db.settings.gain.min * multiplier)) : `${tools.commafy(Math.round(db.settings.gain.min * multiplier))} - ${tools.commafy(Math.round(db.settings.gain.max * multiplier))}`}`,
-        `**Messages remaining: **${estimatedRange}`,
-        `**Cooldown remaining: **${estimatedTime == Infinity ? "Until the end of time" : tools.time(estimatedTime * 1000, 1)}`,
-    ])
+    if (!reached) {
+      levelDetails = levelDetails.concat([
+            "",
+            `**XP per message: **${db.settings.gain.min == db.settings.gain.max ? tools.commafy(Math.round(db.settings.gain.min * multiplier)) : `${tools.commafy(Math.round(db.settings.gain.min * multiplier))} - ${tools.commafy(Math.round(db.settings.gain.max * multiplier))}`}`,
+            `**Messages remaining: **${estimatedRange}`,
+            `**Cooldown remaining: **${estimatedTime == Infinity ? "Until the end of time" : tools.time(estimatedTime * 1000, 1)}`,
+        ])
+    }
 
     let embed = tools.createEmbed({
         author: { name: member.user.displayName, iconURL: member.displayAvatarURL() },

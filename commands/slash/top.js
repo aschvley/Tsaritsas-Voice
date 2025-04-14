@@ -27,9 +27,13 @@ async run(client, int, tools) {
     let rankings = tools.xpObjToArray(db.users)
     rankings = rankings.filter(x => x.xp > minLeaderboardXP && !x.hidden).sort(function(a, b) {return b.xp - a.xp})
 
-    if (db.settings.leaderboard.maxEntries > 0) rankings = rankings.slice(0, db.settings.leaderboard.maxEntries)
+    if (db.settings.leaderboard.maxEntries > 0) {
+      rankings = rankings.slice(0, db.settings.leaderboard.maxEntries)
+    }
 
-    if (!rankings.length) return tools.warn("Nobody in this server is on the leaderboard yet!")
+    if (!rankings.length) {
+      return tools.warn("Nobody in this server is on the leaderboard yet!")
+    }
 
     let highlight = null
     let userSearch = int.options.get("user") || int.options.get("member") // option is "user" if from context menu

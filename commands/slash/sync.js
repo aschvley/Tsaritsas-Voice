@@ -25,7 +25,9 @@ async run(client, int, tools) {
     else if (!db.settings.rewards.length) return tools.warn("This server doesn't have any reward roles!")
 
     let currentXP = db.users[member.id]
-    if (!currentXP || !currentXP.xp) return tools.noXPYet(member.user)
+    if (!currentXP || !currentXP.xp) {
+      return tools.noXPYet(member.user)
+    }
 
     let xp = currentXP.xp
     let level = tools.getLevel(xp, db.settings)
