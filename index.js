@@ -1,5 +1,5 @@
 const Discord = require("discord.js");
-const fs = require("fs");
+const fs = require("fs").promises; // Usamos fs.promises para operaciones asíncronas
 
 const config = require("./config.json");
 
@@ -65,6 +65,19 @@ client.updateStatus = function() {
     client.user.setPresence({ activities: status.type ? [{ name: status.name, state: status.state || undefined, type: Discord.ActivityType[status.type], url: status.url }] : [], status: status.status });
 };
 
+let autoResponses = {};
+
+// Cargar las respuestas automáticas al iniciar el bot
+async function loadAutoResponses() {
+    try {
+        const data = await fs.readFile('./auto_responses.json', 'utf8');
+        autoResponses = JSON.parse(data);
+        console.log('Respuestas automáticas cargadas.');
+    } catch (error) {
+        console.error('Error al cargar las respuestas automáticas:', error);
+    }
+}
+
 // when online
 client.on("ready", () => {
     if (client.shard.id == client.shard.count - 1) console.log(`Bot online! (${+process.uptime().toFixed(2)} secs)`);
@@ -83,6 +96,8 @@ client.on("ready", () => {
     client.updateStatus();
     setInterval(client.updateStatus, 15 * 60000);
 
+    loadAutoResponses(); // Llamar a la función para cargar las respuestas
+
     // run the web server
     if (client.shard.id == 0 && config.enableWebServer) require("./web_app.js")(client);
 });
@@ -91,12 +106,37 @@ client.on("ready", () => {
 client.on("messageCreate", async message => {
     if (message.system || message.author.bot) return;
     else if (!message.guild || !message.member) return; // dm stuff
-    else client.commands.get("message").run(client, message, client.globalTools);
+    else {
+        // --- MANEJO DE MENCIONES ---
+        if (message.mentions.has(client.user.id)) {
+            const mentionerId = message.author.id;
+
+            if (autoResponses[mentionerId]) {
+                const response = autoResponses[mentionerId].replace(/\[Nombre del Usuario]/g, message.author.username);
+                try {
+                    await message.reply({ content: response, allowedMentions: { repliedUser: false } });
+                } catch (error) {
+                    console.error("Error al responder a la mención:", error);
+                }
+            } else {
+                // Respuesta predeterminada para cualquier otro usuario
+                const defaultResponse = "My voice resonates with echoes of a power you do not yet comprehend.";
+                try {
+                    await message.reply({ content: defaultResponse, allowedMentions: { repliedUser: false } });
+                } catch (error) {
+                    console.error("Error al responder con la respuesta predeterminada:", error);
+                }
+            }
+        } else {
+            // Ejecutar el comando de mensaje normal si no es una mención
+            client.commands.get("message").run(client, message, client.globalTools);
+        }
+        // --- FIN DEL MANEJO DE MENCIONES ---
+    }
 });
 
 // on interaction
 client.on("interactionCreate", async int => {
-
     if (!int.guild) return int.reply("You can't use commands in DMs!");
 
     // for setting changes
