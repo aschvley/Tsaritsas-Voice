@@ -190,7 +190,7 @@ client.on("interactionCreate", async int => {
         const button = client.buttons.get('fatui-fact-button');
         if (button) {
             try {
-                await button.run(client, int, client.globalTools); // Asegúrate de que 'client.globalTools' sea el objeto 'tools' correcto
+                await button.run(client, int, client.globalTools);
             } catch (error) {
                 console.error(`Error executing fatui-fact button ${int.customId}:`, error);
                 await int.reply({ content: 'There was an error while processing this Fatui fact!', ephemeral: true });
@@ -200,10 +200,24 @@ client.on("interactionCreate", async int => {
     }
     // --- End Fatui Fact Button Handling ---
 
-// general commands and buttons
+    // --- Handling for all other Buttons ---
+    if (int.isButton()) {
+        const button = client.buttons.get(int.customId);
+        if (button) {
+            try {
+                await button.run(client, int, new Tools(client, int));
+            } catch (error) {
+                console.error(`Error handling button ${int.customId}:`, error);
+                await int.reply({ content: "**Error!** " + error.message, ephemeral: true });
+            }
+            return;
+        }
+    }
+
+    // --- Handling for Slash Commands ---
     if (int.isCommand()) {
         const command = client.commands.get(int.commandName);
-        console.log('Comando encontrado:', command); // <-- Añade esta línea
+        console.log('Comando encontrado:', command);
         if (!command) return;
 
         let tools = new Tools(client, int);
@@ -223,23 +237,6 @@ client.on("interactionCreate", async int => {
             await int.reply({ content: "**Error!** " + error.message, ephemeral: true });
             return;
         }
-    }
-    // dev perm check
-    if (foundCommand && foundCommand.metadata && foundCommand.metadata.dev && !tools.isDev()) return tools.warn("Only developers can use this!");
-    else if (config.lockBotToDevOnly && !tools.isDev()) return tools.warn("Only developers can use this bot!");
-
-    try {
-        if (foundCommand) {
-            // Pasar client.db al comando si es el comando "config"
-            if (foundCommand.metadata.name === 'config') {
-                await foundCommand.run(client, int, tools, client.db);
-            } else {
-                await foundCommand.run(client, int, tools);
-            }
-        }
-    } catch (e) {
-        console.error(e);
-        int.reply({ content: "**Error!** " + e.message, ephemeral: true });
     }
 });
 
