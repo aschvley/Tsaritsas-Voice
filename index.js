@@ -27,9 +27,9 @@ const client = new Discord.Client({
 });
 
 if (!client.shard) {
-    console.error("No sharding info found!\nMake sure you start the bot from polaris.js, not index.js");
-    return process.exit();
-}
+      console.error("No sharding info found!\nMake sure you start the bot from polaris.js, not index.js");
+      process.exit(); // Elimina el 'return'
+    }
 
 client.shard.id = client.shard.ids[0];
 
@@ -200,13 +200,26 @@ client.on("interactionCreate", async int => {
     }
     // --- End Fatui Fact Button Handling ---
 
-    // general commands and buttons
-    let foundCommand = client.commands.get(int.isButton() ? `button:${int.customId.split("~")[0]}` : int.commandName);
-    if (!foundCommand) return;
-    else if (foundCommand.metadata && foundCommand.metadata.slashEquivalent) foundCommand = client.commands.get(foundCommand.metadata.slashEquivalent);
+// general commands and buttons
+    if (int.isCommand()) {
+        const command = client.commands.get(int.commandName);
+        console.log('Comando encontrado:', command); // <-- Añade esta línea
+        if (!command) return;
 
-    let tools = new Tools(client, int);
+        let tools = new Tools(client, int);
 
+        if (command.metadata && command.metadata.dev && !tools.isDev()) return tools.warn("Only developers can use this!");
+        else if (config.lockBotToDevOnly && !tools.isDev()) return tools.warn("Only developers can use this bot!");
+
+        try {
+            await command.execute(int);
+            return;
+        } catch (error) {
+            console.error(error);
+            await int.reply({ content: "**Error!** " + error.message, ephemeral: true });
+            return;
+        }
+    }
     // dev perm check
     if (foundCommand && foundCommand.metadata && foundCommand.metadata.dev && !tools.isDev()) return tools.warn("Only developers can use this!");
     else if (config.lockBotToDevOnly && !tools.isDev()) return tools.warn("Only developers can use this bot!");
