@@ -9,36 +9,44 @@ module.exports = {
         .setDescription('Get a Fatui fact from a selected Harbinger!'),
 
     async run(client, interaction, tools) {
-        // Load Fatui facts from the JSON file
+        // Load Fatui facts
         const fatuiFactsPath = path.join(__dirname, '../../fatui_facts.json');
         const fatuiFacts = JSON.parse(fs.readFileSync(fatuiFactsPath, 'utf8')).fatui_facts;
 
-        // Create a new ActionRowBuilder
-        const row = new ActionRowBuilder();
-
-        // Dynamically create buttons for each Harbinger
+        const harbingerButtons = [];
         for (const harbinger in fatuiFacts) {
             if (fatuiFacts.hasOwnProperty(harbinger) && harbinger !== "General") {
-                row.addComponents(
+                harbingerButtons.push(
                     new ButtonBuilder()
-                        .setCustomId(harbinger.toLowerCase()) // Use the harbinger name in lowercase
+                        .setCustomId(harbinger.toLowerCase())
                         .setLabel(harbinger)
                         .setStyle(ButtonStyle.Primary)
                 );
             }
         }
 
-        // Add a General button for a random Fatui fact
-        row.addComponents(
-            new ButtonBuilder()
-                .setCustomId('general')
-                .setLabel('General Fact')
-                .setStyle(ButtonStyle.Secondary)
-        );
+        const rows = [];
+        for (let i = 0; i < harbingerButtons.length; i += 5) {
+            const row = new ActionRowBuilder()
+                .addComponents(harbingerButtons.slice(i, i + 5));
+            rows.push(row);
+        }
+
+        // Add the General button to the last row or a new row if needed
+        const generalButton = new ButtonBuilder()
+            .setCustomId('general')
+            .setLabel('General Fact')
+            .setStyle(ButtonStyle.Secondary);
+
+        if (rows.length > 0 && rows[rows.length - 1].components.length < 5) {
+            rows[rows.length - 1].addComponents(generalButton);
+        } else {
+            rows.push(new ActionRowBuilder().addComponents(generalButton));
+        }
 
         await interaction.reply({
             content: 'Select a Fatui Harbinger to get a fact! 🧊',
-            components: [row],
+            components: rows,
         });
     },
 };
