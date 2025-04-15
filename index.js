@@ -185,6 +185,21 @@ client.on("interactionCreate", async int => {
     }
     // --- End QOTD Handling ---
 
+    // --- Fatui Fact Button Handling ---
+    if (int.isButton() && (Object.keys(require('./fatui_facts.json').fatui_facts).map(key => key.toLowerCase()).includes(int.customId) || int.isButton() && int.customId === 'general')) {
+        const button = client.buttons.get('fatui-fact-button');
+        if (button) {
+            try {
+                await button.execute(client, int);
+            } catch (error) {
+                console.error(`Error executing fatui-fact button ${int.customId}:`, error);
+                await int.reply({ content: 'There was an error while processing this Fatui fact!', ephemeral: true });
+            }
+        }
+        return;
+    }
+    // --- End Fatui Fact Button Handling ---
+
     // general commands and buttons
     let foundCommand = client.commands.get(int.isButton() ? `button:${int.customId.split("~")[0]}` : int.commandName);
     if (!foundCommand) return;
