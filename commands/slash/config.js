@@ -6,6 +6,7 @@ module.exports = {
     },
 
     async run(client, int, tools, db) { // <-- Recibe 'db' como cuarto argumento
+        console.log('Valor de db dentro de config.js:', db); 
         const serverData = await db.fetch(int.guild.id); // <-- Cambia db.get a db.fetch
         const settings = serverData?.settings || {}; // Accede a las settings si serverData existe
 
