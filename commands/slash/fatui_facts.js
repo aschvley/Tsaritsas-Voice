@@ -8,7 +8,7 @@ module.exports = {
     .setName('fatui-fact')
     .setDescription('Get a Fatui fact from a selected Harbinger!'),
 
-  async execute(interaction) {
+    async run(client, interaction, tools) {
     // Load Fatui facts from the JSON file
     const fatuiFactsPath = path.join(__dirname, '../../fatui_facts.json');
     const fatuiFacts = JSON.parse(fs.readFileSync(fatuiFactsPath, 'utf8')).fatui_facts;

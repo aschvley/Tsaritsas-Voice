@@ -212,7 +212,7 @@ client.on("interactionCreate", async int => {
         else if (config.lockBotToDevOnly && !tools.isDev()) return tools.warn("Only developers can use this bot!");
 
         try {
-            await command.execute(int);
+            await command.run(client, int, tools); // Pasar 'client' también si tus comandos lo usan
             return;
         } catch (error) {
             console.error(error);

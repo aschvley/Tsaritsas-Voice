@@ -7,7 +7,7 @@ module.exports = {
     name: 'fatui-fact-button',
   },
 
-  async execute(interaction) {
+  async run(client, interaction, tools) {
     // Load Fatui facts from the JSON file
     const fatuiFactsPath = path.join(__dirname, '../../fatui_facts.json');
     const fatuiFacts = JSON.parse(fs.readFileSync(fatuiFactsPath, 'utf8')).fatui_facts;
