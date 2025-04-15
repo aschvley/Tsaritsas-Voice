@@ -190,7 +190,7 @@ client.on("interactionCreate", async int => {
         const button = client.buttons.get('fatui-fact-button');
         if (button) {
             try {
-                await button.run(client, int); // <-- Asegúrate de que esto sea 'run'
+                await button.run(client, int, client.globalTools); // Asegúrate de que 'client.globalTools' sea el objeto 'tools' correcto
             } catch (error) {
                 console.error(`Error executing fatui-fact button ${int.customId}:`, error);
                 await int.reply({ content: 'There was an error while processing this Fatui fact!', ephemeral: true });
