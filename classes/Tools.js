@@ -9,7 +9,7 @@ class Tools {
         this.WEBSITE = config.siteURL
         if (!this.WEBSITE.startsWith("http")) this.WEBSITE = "https://gdcolon.com/polaris" // backup URL or some buttons will break
 
-        this.COLOR = 0x00ff80   // polaris green
+        this.COLOR = 0x325a97   // tsaritsa's voice color
 
         // has manage guild perm
         this.canManageServer = function(member=int?.member, nahnvm) {
