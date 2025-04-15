@@ -16,10 +16,13 @@ async run(client, int, tools) {
     let db = await client.db.fetch(int.guild.id)
 
     return Promise.resolve().then(() => {
+// sourcery skip: no-eval
       return eval(code)
     })
     .then(x => {
-        if (typeof x !== "string") x = util.inspect(x)
+        if (typeof x !== "string") {
+          x = util.inspect(x)
+        }
         int.reply(x || "** **").catch((e) => {
             int.reply("✅").catch(() => {})
         });
