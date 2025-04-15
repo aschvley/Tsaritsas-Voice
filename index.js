@@ -206,53 +206,25 @@ client.on("interactionCreate", async int => {
         return;
     }
     // --- End Fatui Fact Button Handling ---
-
-    // --- Handling for all other Buttons ---
-    if (int.isButton()) {
-        console.log('Botón presionado, customId:', int.customId); // Debug
-        const button = client.buttons.get(int.customId);
-        console.log('Manejador de botón encontrado:', button ? button.metadata?.name : 'No encontrado'); // Debug
-        if (button) {
-            try {
-                await button.run(client, int, new Tools(client, int));
-            } catch (error) {
-                console.error(`Error handling button ${int.customId}:`, error);
-                await int.reply({ content: "**Error!** " + error.message, ephemeral: true });
-            }
-            return;
-        }
-    }
-
-    // --- Handling for Slash Commands ---
-    if (int.isCommand()) {
-        const command = client.commands.get(int.commandName);
-        console.log('Comando encontrado:', command);
-        if (!command) return;
-
-        let tools = new Tools(client, int);
-
-        if (command.metadata && command.metadata.dev && !tools.isDev()) return tools.warn("Only developers can use this!");
-        else if (config.lockBotToDevOnly && !tools.isDev()) return tools.warn("Only developers can use this bot!");
-
-        try {
-            if (command.metadata.name === 'config') {
-                await command.run(client, int, tools, client.db);
-            } else {
-                await command.run(client, int, tools);
-            }
-            return;
-        } catch (error) {
-            console.error(error);
-            await int.reply({ content: "**Error!** " + error.message, ephemeral: true });
-            return;
-        }
-    }
-});
-
-client.on('error', e => console.warn(e));
-client.on('warn', e => console.warn(e));
-
-process.on('uncaughtException', e => console.warn(e));
-process.on('unhandledRejection', (e, p) => console.warn(e));
-
-client.login(process.env.DISCORD_TOKEN);
+    // general commands and buttons
+    let foundCommand = client.commands.get(int.isButton() ? `button:${int.customId.split("~")[0]}` : int.commandName);
+    if (!foundCommand) return;
+    else if (foundCommand.metadata.slashEquivalent) foundCommand = client.commands.get(foundCommand.metadata.slashEquivalent);
+    
+    let tools = new Tools(client, int);
+    
+    // dev perm check
+    if (foundCommand.metadata.dev && !tools.isDev()) return tools.warn("Only developers can use this!");
+    else if (config.lockBotToDevOnly && !tools.isDev()) return tools.warn("Only developers can use this bot!");
+    
+    try { await foundCommand.run(client, int, tools); }
+    catch(e) { console.error(e); int.reply({ content: "**Error!** " + e.message, ephemeral: true }); }
+    });
+    
+    client.on('error', e => console.warn(e));
+    client.on('warn', e => console.warn(e));
+    
+    process.on('uncaughtException', e => console.warn(e));
+    process.on('unhandledRejection', (e, p) => console.warn(e));
+    
+    client.login(process.env.DISCORD_TOKEN);
