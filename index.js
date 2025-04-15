@@ -53,9 +53,16 @@ fs.readdirSync(dir).forEach(type => {
 // button files
 client.buttons = new Discord.Collection();
 fs.readdirSync('./commands/button').filter(file => file.endsWith('.js')).forEach(file => {
-    const button = require(`./commands/button/${file}`);
-    if (button.metadata && button.metadata.name) {
-        client.buttons.set(button.metadata.name, button);
+    try {
+        const button = require(`./commands/button/${file}`);
+        if (button.metadata && button.metadata.name) {
+            client.buttons.set(button.metadata.name, button);
+            console.log(`Botón cargado: ${file} con nombre ${button.metadata.name}`); // Debug
+        } else {
+            console.warn(`Advertencia: ${file} no tiene metadata.name.`); // Debug
+        }
+    } catch (error) {
+        console.error(`Error al cargar el botón ${file}:`, error); // Debug
     }
 });
 
@@ -202,7 +209,9 @@ client.on("interactionCreate", async int => {
 
     // --- Handling for all other Buttons ---
     if (int.isButton()) {
+        console.log('Botón presionado, customId:', int.customId); // Debug
         const button = client.buttons.get(int.customId);
+        console.log('Manejador de botón encontrado:', button ? button.metadata?.name : 'No encontrado'); // Debug
         if (button) {
             try {
                 await button.run(client, int, new Tools(client, int));
