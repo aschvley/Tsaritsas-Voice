@@ -27,8 +27,8 @@ const client = new Discord.Client({
 });
 
 if (!client.shard) {
-      console.error("No sharding info found!\nMake sure you start the bot from polaris.js, not index.js");
-      process.exit(); // Elimina el 'return'
+        console.error("No sharding info found!\nMake sure you start the bot from polaris.js, not index.js");
+        process.exit(); // Elimina el 'return'
     }
 
 client.shard.id = client.shard.ids[0];
@@ -190,7 +190,7 @@ client.on("interactionCreate", async int => {
         const button = client.buttons.get('fatui-fact-button');
         if (button) {
             try {
-                await button.execute(client, int);
+                await button.run(client, int); // <-- Asegúrate de que esto sea 'run'
             } catch (error) {
                 console.error(`Error executing fatui-fact button ${int.customId}:`, error);
                 await int.reply({ content: 'There was an error while processing this Fatui fact!', ephemeral: true });
@@ -212,7 +212,11 @@ client.on("interactionCreate", async int => {
         else if (config.lockBotToDevOnly && !tools.isDev()) return tools.warn("Only developers can use this bot!");
 
         try {
-            await command.run(client, int, tools); // Pasar 'client' también si tus comandos lo usan
+            if (command.metadata.name === 'config') {
+                await command.run(client, int, tools, client.db);
+            } else {
+                await command.run(client, int, tools);
+            }
             return;
         } catch (error) {
             console.error(error);
