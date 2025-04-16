@@ -16,8 +16,11 @@ module.exports = {
 
         try {
             // Enviar el mensaje de introducción con la mención del rol
-            await qotdChannel.send({ content: `<@&${qotdRoleId}>, A query from the Tsaritsa descends upon you. Her Majesty awaits your insightful responses. Let your wisdom be known.` });
-
+            await qotdChannel.send({
+                content: `<@&${qotdRoleId}>, A query from the Tsaritsa descends upon you. Her Majesty awaits your insightful responses. Let your wisdom be known.`,
+                allowedMentions: { roles: [qotdRoleId] }
+            });
+            
             const embed = new EmbedBuilder()
                 .setTitle('`Question of the Day`')
                 .setDescription(`# ${question}`)
