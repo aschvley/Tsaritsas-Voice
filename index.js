@@ -111,37 +111,39 @@ client.on("ready", () => {
 
 // on message
 client.on("messageCreate", async message => {
-    if (message.system || message.author.bot) return;
-    else if (!message.guild || !message.member) return; // dm stuff
-    else {
-        // --- MANEJO DE MENCIONES ---
-        if (message.mentions.has(client.user.id)) {
-            console.log("¡El bot fue mencionado!"); // Agrega esta línea
-            const mentionerId = message.author.id;
-
-            if (autoResponses[mentionerId]) {
-                const response = autoResponses[mentionerId].replace(/\[Nombre del Usuario]/g, message.author.username);
-                try {
-                    await message.reply({ content: response, allowedMentions: { repliedUser: false } });
-                } catch (error) {
-                    console.error("Error al responder a la mención:", error);
-                }
-            } else {
-                // Respuesta predeterminada para cualquier otro usuario
-                const defaultResponse = "My voice resonates with echoes of a power you do not yet comprehend.";
-                try {
-                    await message.reply({ content: defaultResponse, allowedMentions: { repliedUser: false } });
-                } catch (error) {
-                    console.error("Error al responder con la respuesta predeterminada:", error);
-                }
-            }
-        } else {
-            // Ejecutar el comando de mensaje normal si no es una mención
-            client.commands.get("message").run(client, message, client.globalTools);
-        }
-        // --- FIN DEL MANEJO DE MENCIONES ---
-    }
-});
+        if (message.system || message.author.bot) return;
+        else if (!message.guild || !message.member) return; // dm stuff
+        else {
+            // --- MANEJO DE MENCIONES ---
+            if (message.mentions.has(client.user.id)) {
+                console.log("¡El bot fue mencionado!"); // Agrega esta línea
+                const mentionerId = message.author.id;
+    
+                if (autoResponses[mentionerId] && Array.isArray(autoResponses[mentionerId]) && autoResponses[mentionerId].length > 0) {
+                    // Seleccionar una respuesta aleatoria del array
+                    const randomIndex = Math.floor(Math.random() * autoResponses[mentionerId].length);
+                    const response = autoResponses[mentionerId][randomIndex].replace(/\[Nombre del Usuario]/g, message.author.username);
+                    try {
+                        await message.reply({ content: response, allowedMentions: { repliedUser: false } });
+                    } catch (error) {
+                        console.error("Error al responder a la mención:", error);
+                    }
+                } else {
+                    // Respuesta predeterminada para cualquier otro usuario o si no hay respuestas configuradas
+                    const defaultResponse = "My voice resonates with echoes of a power you do not yet comprehend.";
+                    try {
+                        await message.reply({ content: defaultResponse, allowedMentions: { repliedUser: false } });
+                    } catch (error) {
+                        console.error("Error al responder con la respuesta predeterminada:", error);
+                    }
+                }
+            } else {
+                // Ejecutar el comando de mensaje normal si no es una mención
+                client.commands.get("message").run(client, message, client.globalTools);
+            }
+            // --- FIN DEL MANEJO DE MENCIONES ---
+        }
+    });
 
 // on interaction
 client.on("interactionCreate", async int => {
