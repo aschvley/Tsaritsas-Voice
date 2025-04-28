@@ -26,6 +26,6 @@ module.exports = {
                     .setStyle(ButtonStyle.Primary),
             );
 
-        await interaction.reply({ embeds: [initialEmbed], components: [actionRow], ephemeral: true });
+        await interaction.reply({ embeds: [initialEmbed], components: [actionRow]});
     },
 };

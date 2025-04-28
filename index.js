@@ -244,11 +244,16 @@ if (int.isChatInputCommand() && int.commandName === 'announce') {
     }
 
     try {
-        await announcementChannel.send({ content: announcementContent, allowedMentions: { parse: ['users', 'roles'] } });
-        await int.editReply({ content: `Announcement sent to #${announcementChannel.name}! ✅`, ephemeral: true });
+        const announcementEmbed = new EmbedBuilder()
+            .setColor('#325a97') // Puedes elegir el color que prefieras
+            .setDescription(announcementContent)
+            .setTimestamp(); // Opcional: añade una marca de tiempo
+
+        await announcementChannel.send({ embeds: [announcementEmbed], allowedMentions: { parse: ['users', 'roles'] } });
+        await int.editReply({ content: `Announcement sent to #${announcementChannel.name}! ✅`});
     } catch (error) {
         console.error('Error sending announcement:', error);
-        await int.editReply({ content: 'Error: Could not send the announcement.', ephemeral: true });
+        await int.editReply({ content: 'Error: Could not send the announcement as an embed.', ephemeral: true });
     }
     return;
 }
