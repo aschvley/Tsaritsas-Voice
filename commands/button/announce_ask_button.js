@@ -4,7 +4,7 @@ module.exports = {
     metadata: {
         name: 'announce-ask-button',
     },
-    async execute(client, interaction) {
+    async run(client, interaction) { // ✅ Cambiado 'execute' a 'run'
         const modal = new ModalBuilder()
             .setCustomId('announce-modal')
             .setTitle('✍️ Write Your Announcement ✍️');
