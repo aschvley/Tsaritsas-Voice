@@ -12,7 +12,7 @@ module.exports = {
                 .setDescription('Sends an announcement to the designated channel.'),
         },
     },
-    async run(client, interaction) {
+    async execute(client, interaction) { // 🔄 Cambiado de 'run' a 'execute'
         const initialEmbed = new EmbedBuilder()
             .setTitle('📢 Create New Announcement 📢')
             .setDescription('Press the button below to write the announcement that will be sent to the announcement channel.')
