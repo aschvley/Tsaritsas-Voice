@@ -6,8 +6,6 @@ module.exports = {
     },
     async run(client, interaction) {
         try {
-            await interaction.reply({ content: 'Preparing announcement modal...', ephemeral: true });
-
             const modal = new ModalBuilder()
                 .setCustomId('announce-modal')
                 .setTitle('📢 Write Your Announcement 📢')
@@ -33,7 +31,7 @@ module.exports = {
                 );
             await interaction.showModal(modal);
         } catch (error) {
-            console.error('Error in announce-ask-button:', error);
+            console.error('Error showing modal:', error);
             await interaction.followUp({ content: 'Failed to show the announcement modal.', ephemeral: true });
         }
     },
