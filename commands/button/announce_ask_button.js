@@ -4,7 +4,7 @@ module.exports = {
     metadata: {
         name: 'announce-ask-button',
     },
-    async execute(client, interaction) { // 🔄 Cambiado de 'run' a 'execute'
+    async run(client, interaction) { // ✅ Usando 'run' con async
         const modal = new ModalBuilder()
             .setCustomId('announce-modal')
             .setTitle('📢 Write Your Announcement 📢')
@@ -22,21 +22,9 @@ module.exports = {
                         .setCustomId('mention-role-select')
                         .setPlaceholder('Select who to mention (optional)')
                         .addOptions(
-                            {
-                                label: '@everyone',
-                                value: 'everyone',
-                                description: 'Mention all members of the server.',
-                            },
-                            {
-                                label: '@Fatui Recruit',
-                                value: 'fatui_recruit',
-                                description: 'Mention the Fatui Recruit role.',
-                            },
-                            {
-                                label: 'No Mention',
-                                value: 'none',
-                                description: 'Do not mention any role.',
-                            },
+                            { label: '@everyone', value: 'everyone', description: 'Mention all members of the server.' },
+                            { label: '@Fatui Recruit', value: 'fatui_recruit', description: 'Mention the Fatui Recruit role.' },
+                            { label: 'No Mention', value: 'none', description: 'Do not mention any role.' },
                         ),
                 ),
             );

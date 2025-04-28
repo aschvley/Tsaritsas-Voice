@@ -1,18 +1,13 @@
-const { SlashCommandBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
-const ANNOUNCE_BUTTON_ID = 'announce-ask-button'; // ID único para el botón
+const ANNOUNCE_BUTTON_ID = 'announce-ask-button'; // Asegúrate de que esta constante coincida con el ID del botón
 
 module.exports = {
     metadata: {
         name: 'announce',
         description: 'Sends an announcement to the designated channel.',
-        slashCommand: { // Puedes anidar la información específica del Slash Command
-            builder: (builder) => builder
-                .setName('announce')
-                .setDescription('Sends an announcement to the designated channel.'),
-        },
     },
-    async execute(client, interaction) { // 🔄 Cambiado de 'run' a 'execute'
+    async run(client, interaction, tools) { // ✅ Usando 'run' con async
         const initialEmbed = new EmbedBuilder()
             .setTitle('📢 Create New Announcement 📢')
             .setDescription('Press the button below to write the announcement that will be sent to the announcement channel.')
@@ -26,6 +21,6 @@ module.exports = {
                     .setStyle(ButtonStyle.Primary),
             );
 
-        await interaction.reply({ embeds: [initialEmbed], components: [actionRow]});
+        await interaction.reply({ embeds: [initialEmbed], components: [actionRow] });
     },
 };
