@@ -22,11 +22,11 @@ module.exports = {
                         new StringSelectMenuBuilder()
                             .setCustomId('mention-role-select')
                             .setPlaceholder('Select who to mention (optional)')
-                            .addOptions(
+                            .addOptions([ // ✅ Pasando array directamente a addOptions
                                 { label: '@everyone', value: 'everyone', description: 'Mention all members of the server.' },
                                 { label: '@Fatui Recruit', value: 'fatui_recruit', description: 'Mention the Fatui Recruit role.' },
                                 { label: 'No Mention', value: 'none', description: 'Do not mention any role.' },
-                            ),
+                            ]),
                     ),
                 );
             await interaction.showModal(modal);
