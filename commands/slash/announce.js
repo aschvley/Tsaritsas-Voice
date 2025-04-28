@@ -3,9 +3,15 @@ const { SlashCommandBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, Act
 const ANNOUNCE_BUTTON_ID = 'announce-ask-button'; // ID único para el botón
 
 module.exports = {
-    data: new SlashCommandBuilder()
-        .setName('announce')
-        .setDescription('Sends an announcement to the designated channel.'),
+    metadata: {
+        name: 'announce',
+        description: 'Sends an announcement to the designated channel.',
+        slashCommand: { // Puedes anidar la información específica del Slash Command
+            builder: (builder) => builder
+                .setName('announce')
+                .setDescription('Sends an announcement to the designated channel.'),
+        },
+    },
     async run(client, interaction) {
         const initialEmbed = new EmbedBuilder()
             .setTitle('📢 Create New Announcement 📢')

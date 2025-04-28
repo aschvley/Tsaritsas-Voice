@@ -215,7 +215,7 @@ client.on("interactionCreate", async int => {
         const button = client.buttons.get('announce-ask-button');
         if (button) {
             try {
-                await button.execute(client, int);
+                await button.run(client, int);
             } catch (error) {
                 console.error('Error executing announce-ask-button:', error);
                 await int.reply({ content: 'There was an error while processing the announcement button!', ephemeral: true });
@@ -223,25 +223,38 @@ client.on("interactionCreate", async int => {
         }
         return;
     } else if (int.isModalSubmit() && int.customId === 'announce-modal') {
-        await int.deferReply(); // Cambiado a deferReply() sin ephemeral
-    
+        await int.deferReply(); // Respuesta inicial no efímera
+
         const announcementContent = int.fields.getTextInputValue('announcement-input');
-        const announcementChannelId = 'ID_DEL_CANAL_DE_ANUNCIOS';
+        const mentionPreference = int.components[1]?.components[0]?.values[0]; // Obtenemos la selección del Select Menu
+
+        const announcementChannelId = '1305238701819039804';
         const announcementChannel = client.channels.cache.get(announcementChannelId);
-    
+        const fatuiRecruitRoleId = '1327783932846018584';
+
+        let mention = '';
+        if (mentionPreference === 'everyone') {
+            mention = '@everyone ';
+        } else if (mentionPreference === 'fatui_recruit') {
+            mention = `<@&${fatuiRecruitRoleId}>`;
+        }
+
         if (!announcementChannel) {
             return await int.editReply({ content: 'Error: Announcement channel not found.', ephemeral: true });
         }
-    
+
         try {
-            await announcementChannel.send({ content: announcementContent });
-            await int.editReply({ content: `Announcement sent to #${announcementChannel.name}! ✅` }); // Eliminado ephemeral: true
+            await announcementChannel.send({
+                content: `${mention}${announcementContent}`,
+                allowedMentions: { parse: ['users', 'roles'] }
+            });
+            await int.editReply({ content: `Announcement sent to #${announcementChannel.name}! ✅ (Mention: ${mention || 'None'})` });
         } catch (error) {
             console.error('Error sending announcement:', error);
             await int.editReply({ content: 'Error: Could not send the announcement.', ephemeral: true });
         }
     }
-    
+
     // --- End ANNOUNCE Button Handling ---
 
     // general commands and buttons
