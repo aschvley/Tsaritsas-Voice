@@ -223,25 +223,25 @@ client.on("interactionCreate", async int => {
         }
         return;
     } else if (int.isModalSubmit() && int.customId === 'announce-modal') {
-        await int.deferReply({ ephemeral: true });
-
+        await int.deferReply(); // Cambiado a deferReply() sin ephemeral
+    
         const announcementContent = int.fields.getTextInputValue('announcement-input');
-        const announcementChannelId = '1305238701819039804'; 
+        const announcementChannelId = 'ID_DEL_CANAL_DE_ANUNCIOS';
         const announcementChannel = client.channels.cache.get(announcementChannelId);
-
+    
         if (!announcementChannel) {
             return await int.editReply({ content: 'Error: Announcement channel not found.', ephemeral: true });
         }
-
+    
         try {
             await announcementChannel.send({ content: announcementContent });
-            await int.editReply({ content: `Announcement sent to #${announcementChannel.name}! ✅` });
+            await int.editReply({ content: `Announcement sent to #${announcementChannel.name}! ✅` }); // Eliminado ephemeral: true
         } catch (error) {
             console.error('Error sending announcement:', error);
             await int.editReply({ content: 'Error: Could not send the announcement.', ephemeral: true });
         }
     }
-
+    
     // --- End ANNOUNCE Button Handling ---
 
     // general commands and buttons
