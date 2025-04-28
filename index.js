@@ -211,17 +211,18 @@ client.on("interactionCreate", async int => {
 
     // --- ANNOUNCE Button Handling ---
 
-    if (int.isButton() && int.customId === 'announce-ask-button') {
-        const button = client.buttons.get('announce-ask-button');
-        if (button) {
-            try {
-                await button.run(client, int);
-            } catch (error) {
-                console.error('Error executing announce-ask-button:', error);
-                await int.reply({ content: 'There was an error while processing the announcement button!', ephemeral: true });
-            }
+// --- ANNOUNCE Button Handling ---
+if (int.isButton() && int.customId === 'announce-ask-button') {
+    const buttonFile = client.buttons.get('announce-ask-button');
+    if (buttonFile?.execute) { // ✅ Usando optional chaining para verificar si 'execute' existe
+        try {
+            await buttonFile.execute(client, int); // ✅ Llamamos a 'execute'
+        } catch (error) {
+            console.error('Error executing announce-ask-button:', error);
+            await int.reply({ content: 'There was an error while processing the announcement button!', ephemeral: true });
         }
-        return;
+    }
+    return;
     } else if (int.isModalSubmit() && int.customId === 'announce-modal') {
         await int.deferReply(); // Respuesta inicial no efímera
 
