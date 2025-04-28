@@ -55,7 +55,7 @@ client.buttons = new Discord.Collection();
 fs.readdirSync('./commands/button').filter(file => file.endsWith('.js')).forEach(file => {
     try {
         const button = require(`./commands/button/${file}`);
-        if (button.metadata && button.metadata.name) {
+        if (button.metadata?.name) { // Usando optional chaining
             client.buttons.set(button.metadata.name, button);
             console.log(`Botón cargado: ${file} con nombre ${button.metadata.name}`); // Debug
         } else {
@@ -111,38 +111,38 @@ client.on("ready", () => {
 
 // on message
 client.on("messageCreate", async message => {
-        if (message.system || message.author.bot) return;
-        else if (!message.guild || !message.member) return; // dm stuff
-        else {
-            // --- MANEJO DE MENCIONES ---
-            if (message.mentions.has(client.user.id)) {
-                console.log("¡El bot fue mencionado!"); // Agrega esta línea
-                const mentionerId = message.author.id;
+        if (message.system || message.author.bot) return;
+        else if (!message.guild || !message.member) return; // dm stuff
+        else {
+        // --- MANEJO DE MENCIONES ---
+                if (message.mentions.has(client.user.id)) {
+                console.log("¡El bot fue mencionado!"); // Agrega esta línea
+                const mentionerId = message.author.id;
     
-                if (autoResponses[mentionerId] && Array.isArray(autoResponses[mentionerId]) && autoResponses[mentionerId].length > 0) {
-                    // Seleccionar una respuesta aleatoria del array
-                    const randomIndex = Math.floor(Math.random() * autoResponses[mentionerId].length);
-                    const response = autoResponses[mentionerId][randomIndex].replace(/\[Nombre del Usuario]/g, message.author.username);
-                    try {
-                        await message.reply({ content: response, allowedMentions: { repliedUser: false } });
-                    } catch (error) {
-                        console.error("Error al responder a la mención:", error);
-                    }
-                } else {
-                    // Respuesta predeterminada para cualquier otro usuario o si no hay respuestas configuradas
-                    const defaultResponse = "My voice resonates with echoes of a power you do not yet comprehend.";
-                    try {
-                        await message.reply({ content: defaultResponse, allowedMentions: { repliedUser: false } });
-                    } catch (error) {
-                        console.error("Error al responder con la respuesta predeterminada:", error);
-                    }
-                }
-            } else {
-                // Ejecutar el comando de mensaje normal si no es una mención
-                client.commands.get("message").run(client, message, client.globalTools);
-            }
-            // --- FIN DEL MANEJO DE MENCIONES ---
-        }
+                if (autoResponses[mentionerId] && Array.isArray(autoResponses[mentionerId]) && autoResponses[mentionerId].length > 0) {
+                    // Seleccionar una respuesta aleatoria del array
+                    const randomIndex = Math.floor(Math.random() * autoResponses[mentionerId].length);
+                    const response = autoResponses[mentionerId][randomIndex].replace(/\[Nombre del Usuario]/g, message.author.username);
+                    try {
+                        await message.reply({ content: response, allowedMentions: { repliedUser: false } });
+                    } catch (error) {
+                        console.error("Error al responder a la mención:", error);
+                     }
+                    } else {
+                         // Respuesta predeterminada para cualquier otro usuario o si no hay respuestas configuradas
+                         const defaultResponse = "My voice resonates with echoes of a power you do not yet comprehend.";
+                          try {
+                             await message.reply({ content: defaultResponse, allowedMentions: { repliedUser: false } });
+                     } catch (error) {
+                    console.error("Error al responder con la respuesta predeterminada:", error);
+                    }
+                }
+            } else {
+                // Ejecutar el comando de mensaje normal si no es una mención
+                client.commands.get("message").run(client, message, client.globalTools);
+            }
+             // --- FIN DEL MANEJO DE MENCIONES ---
+         }
     });
 
 // on interaction
@@ -208,6 +208,42 @@ client.on("interactionCreate", async int => {
         return;
     }
     // --- End Fatui Fact Button Handling ---
+
+    // --- ANNOUNCE Button Handling ---
+
+    if (int.isButton() && int.customId === 'announce-ask-button') {
+        const button = client.buttons.get('announce-ask-button');
+        if (button) {
+            try {
+                await button.execute(client, int);
+            } catch (error) {
+                console.error('Error executing announce-ask-button:', error);
+                await int.reply({ content: 'There was an error while processing the announcement button!', ephemeral: true });
+            }
+        }
+        return;
+    } else if (int.isModalSubmit() && int.customId === 'announce-modal') {
+        await int.deferReply({ ephemeral: true });
+
+        const announcementContent = int.fields.getTextInputValue('announcement-input');
+        const announcementChannelId = '1305238701819039804'; 
+        const announcementChannel = client.channels.cache.get(announcementChannelId);
+
+        if (!announcementChannel) {
+            return await int.editReply({ content: 'Error: Announcement channel not found.', ephemeral: true });
+        }
+
+        try {
+            await announcementChannel.send({ content: announcementContent });
+            await int.editReply({ content: `Announcement sent to #${announcementChannel.name}! ✅` });
+        } catch (error) {
+            console.error('Error sending announcement:', error);
+            await int.editReply({ content: 'Error: Could not send the announcement.', ephemeral: true });
+        }
+    }
+
+    // --- End ANNOUNCE Button Handling ---
+
     // general commands and buttons
     let foundCommand = client.commands.get(int.isButton() ? `button:${int.customId.split("~")[0]}` : int.commandName);
     if (!foundCommand) return;
