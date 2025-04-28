@@ -1,4 +1,4 @@
-const { ModalBuilder, ActionRowBuilder, TextInputBuilder, TextInputStyle, StringSelectMenuBuilder } = require('discord.js');
+const { ModalBuilder, ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
 
 module.exports = {
     metadata: {
@@ -8,21 +8,13 @@ module.exports = {
         try {
             const modal = new ModalBuilder()
                 .setCustomId('announce-modal')
-                .setTitle('📢 Write Your Announcement 📢')
+                .setTitle('📢 Select Mention 📢')
                 .addComponents(
-                    new ActionRowBuilder().addComponents(
-                        new TextInputBuilder()
-                            .setCustomId('announcement-input')
-                            .setLabel('Announcement Content (Supports Markdown)')
-                            .setStyle(TextInputStyle.Paragraph)
-                            .setPlaceholder('Enter your announcement here. You can use **bold**, *italic*, lists, etc.')
-                            .setRequired(true),
-                    ),
                     new ActionRowBuilder().addComponents(
                         new StringSelectMenuBuilder()
                             .setCustomId('mention-role-select')
                             .setPlaceholder('Select who to mention (optional)')
-                            .addOptions([ // ✅ Pasando array directamente a addOptions
+                            .addOptions([
                                 { label: '@everyone', value: 'everyone', description: 'Mention all members of the server.' },
                                 { label: '@Fatui Recruit', value: 'fatui_recruit', description: 'Mention the Fatui Recruit role.' },
                                 { label: 'No Mention', value: 'none', description: 'Do not mention any role.' },
@@ -31,8 +23,8 @@ module.exports = {
                 );
             await interaction.showModal(modal);
         } catch (error) {
-            console.error('Error showing modal:', error);
-            await interaction.followUp({ content: 'Failed to show the announcement modal.', ephemeral: true });
+            console.error('Error showing modal (Select Menu only):', error);
+            await interaction.followUp({ content: 'Failed to show the announcement modal (Select Menu only).', ephemeral: true });
         }
     },
 };
