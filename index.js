@@ -2,7 +2,7 @@ const Discord = require("discord.js");
 const fs = require("fs");
 
 const config = require("./config.json");
-
+const { EmbedBuilder } = require('discord.js');
 const Tools = require("./classes/Tools.js");
 const Model = require("./classes/DatabaseModel.js");
 
@@ -253,7 +253,8 @@ if (int.isChatInputCommand() && int.commandName === 'announce') {
         await int.editReply({ content: `Announcement sent to #${announcementChannel.name}! ✅`});
     } catch (error) {
         console.error('Error sending announcement:', error);
-        await int.editReply({ content: 'Error: Could not send the announcement as an embed.', ephemeral: true });
+        console.error('Error details:', error.message, error.stack); // Añadimos más detalles del error
+        await int.editReply({ content: 'Error: Could not send the announcement as an embed. See console for details.', ephemeral: true });
     }
     return;
 }
