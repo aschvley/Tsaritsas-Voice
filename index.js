@@ -209,12 +209,12 @@ client.on("interactionCreate", async int => {
     }
     // --- End Fatui Fact Button Handling ---
 
-    // --- ANNOUNCE Handling ---
+// --- ANNOUNCE Handling (Simplified with Button) ---
 if (int.isChatInputCommand() && int.commandName === 'announce') {
     const command = client.commands.get('announce');
-    if (command && command.run) { // ✅ Verificamos 'command.run'
+    if (command && command.run) {
         try {
-            await command.run(client, int, { /* Aquí puedes pasar herramientas o información adicional si es necesario */ });
+            await command.run(client, int);
         } catch (error) {
             console.error('Error executing announce command:', error);
             await int.reply({ content: 'There was an error while processing the announce command!', ephemeral: true });
@@ -223,7 +223,7 @@ if (int.isChatInputCommand() && int.commandName === 'announce') {
     return;
 } else if (int.isButton() && int.customId === 'announce-ask-button') {
     const button = client.buttons.get('announce-ask-button');
-    if (button && button.run) { // ✅ Verificamos 'button.run'
+    if (button && button.run) {
         try {
             await button.run(client, int);
         } catch (error) {
@@ -236,28 +236,23 @@ if (int.isChatInputCommand() && int.commandName === 'announce') {
     await int.deferReply({ ephemeral: true });
 
     const announcementContent = int.fields.getTextInputValue('announcement-input');
-    const mentionPreference = int.components[1]?.components[0]?.values[0];
-
     const announcementChannelId = '1305238701819039804';
     const announcementChannel = client.channels.cache.get(announcementChannelId);
-    const fatuiRecruitRoleId = '1327783932846018584';
 
-    let mention = '';
-    if (mentionPreference === 'everyone') mention = '@everyone ';
-    else if (mentionPreference === 'fatui_recruit') mention = `<@&${fatuiRecruitRoleId}> `;
-
-    if (!announcementChannel) return await int.editReply({ content: 'Error: Announcement channel not found.', ephemeral: true });
+    if (!announcementChannel) {
+        return await int.editReply({ content: 'Error: Announcement channel not found.', ephemeral: true });
+    }
 
     try {
-        await announcementChannel.send({ content: `${mention}${announcementContent}`, allowedMentions: { parse: ['users', 'roles'] } });
-        await int.editReply({ content: `Announcement sent to #${announcementChannel.name}! ✅ (Mention: ${mention || 'None'})` });
+        await announcementChannel.send({ content: announcementContent, allowedMentions: { parse: ['users', 'roles'] } });
+        await int.editReply({ content: `Announcement sent to #${announcementChannel.name}! ✅`, ephemeral: true });
     } catch (error) {
         console.error('Error sending announcement:', error);
         await int.editReply({ content: 'Error: Could not send the announcement.', ephemeral: true });
     }
     return;
 }
-// --- End ANNOUNCE Handling ---
+// --- End ANNOUNCE Handling (Simplified with Button) ---
 
     // general commands and buttons
     let foundCommand = client.commands.get(int.isButton() ? `button:${int.customId.split("~")[0]}` : int.commandName);
