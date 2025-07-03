@@ -6,6 +6,9 @@ const { EmbedBuilder } = require('discord.js');
 const Tools = require("./classes/Tools.js");
 const Model = require("./classes/DatabaseModel.js");
 
+const mongoose = require('mongoose'); // <--- NUEVO: Importar Mongoose
+require('dotenv').config();
+
 // automatic files: these handle discord status and version number, manage them with the dev commands
 const autoPath = "./json/auto/";
 if (!fs.existsSync(autoPath)) fs.mkdirSync(autoPath);
@@ -38,16 +41,55 @@ client.globalTools = new Tools(client);
 // connect to db
 client.db = new Model("servers", require("./database_schema.js").schema);
 
+// NUEVO: Función para conectar a MongoDB Atlas con Mongoose (ACTUALIZADA PARA MONGOOSE 8+)
+async function connectMongooseDB() {
+    try {
+        await mongoose.connect(process.env.MONGODB_URI); // <--- SIMPLIFICADO: sin opciones useNewUrlParser/useUnifiedTopology
+        console.log('✅ Conectado a MongoDB Atlas (Mongoose)!');
+    } catch (error) {
+        console.error('❌ Error al conectar a MongoDB Atlas (Mongoose):', error);
+        // Puedes decidir si process.exit(1) aquí es apropiado para tu aplicación
+        // si la base de datos es absolutamente crítica para el funcionamiento del bot.
+        // Por ahora, lo dejamos comentado para que el bot intente seguir funcionando.
+    }
+}
+
 // command files
 const dir = "./commands/";
 client.commands = new Discord.Collection();
 fs.readdirSync(dir).forEach(type => {
-    fs.readdirSync(dir + type).filter(x => x.endsWith(".js")).forEach(file => {
-        let command = require(dir + type + "/" + file);
-        if (!command.metadata) command.metadata = { name: file.split(".js")[0] };
-        command.metadata.type = type;
-        client.commands.set(command.metadata.name, command);
-    });
+    // Si 'type' es 'slash', necesitamos buscar en sus subdirectorios
+    if (type === 'slash') {
+        const slashDir = dir + type + '/';
+        fs.readdirSync(slashDir).forEach(slashSubDir => {
+            const fullSubDirPath = slashDir + slashSubDir;
+            if (fs.statSync(fullSubDirPath).isDirectory()) { // Asegurarse de que sea un directorio
+                fs.readdirSync(fullSubDirPath).filter(x => x.endsWith(".js")).forEach(file => {
+                    let command = require(fullSubDirPath + "/" + file);
+                    if (!command.metadata) command.metadata = { name: file.split(".js")[0] };
+                    command.metadata.type = 'slash'; // Asegurarse de que el tipo sea 'slash'
+                    command.metadata.category = slashSubDir; // Añadir categoría (ej: 'economy')
+                    client.commands.set(command.metadata.name, command);
+                    console.log(`Comando /${slashSubDir}/${command.metadata.name} cargado.`); // Debugging
+                });
+            } else if (slashSubDir.endsWith(".js")) { // Archivos .js directamente en slash/
+                 let command = require(fullSubDirPath);
+                 if (!command.metadata) command.metadata = { name: slashSubDir.split(".js")[0] };
+                 command.metadata.type = 'slash';
+                 client.commands.set(command.metadata.name, command);
+                 console.log(`Comando /${command.metadata.name} cargado.`); // Debugging
+            }
+        });
+    } else {
+        // Tu lógica existente para otros tipos de comandos (button, misc, user_context, etc.)
+        fs.readdirSync(dir + type).filter(x => x.endsWith(".js")).forEach(file => {
+            let command = require(dir + type + "/" + file);
+            if (!command.metadata) command.metadata = { name: file.split(".js")[0] };
+            command.metadata.type = type;
+            client.commands.set(command.metadata.name, command);
+            console.log(`Comando ${type}:${command.metadata.name} cargado.`); // Debugging
+        });
+    }
 });
 
 // button files
@@ -86,10 +128,12 @@ function loadAutoResponses() {
 }
 
 // when online
-client.on("ready", () => {
+client.on("ready", async () => {
     if (client.shard.id == client.shard.count - 1) console.log(`Bot online! (${+process.uptime().toFixed(2)} secs)`);
     client.startupTime = Date.now() - startTime;
     client.version = version;
+
+    await connectMongooseDB(); // <--- NUEVO: Llamar a la función de conexión a Mongoose DB aquí
 
     client.application.commands.fetch() // cache slash commands
         .then(cmds => {
@@ -148,6 +192,9 @@ client.on("messageCreate", async message => {
 // on interaction
 client.on("interactionCreate", async int => {
     if (!int.guild) return int.reply("You can't use commands in DMs!");
+
+    // ÚNICO CAMBIO EN LA PARTE SUPERIOR DE ESTE BLOQUE: Define 'tools' aquí al principio.
+    const tools = new Tools(client, int);
 
     // for setting changes
     if (int.isStringSelectMenu()) {
@@ -263,18 +310,34 @@ if (int.isChatInputCommand() && int.commandName === 'announce') {
     // general commands and buttons
     let foundCommand = client.commands.get(int.isButton() ? `button:${int.customId.split("~")[0]}` : int.commandName);
     if (!foundCommand) return;
-    else if (foundCommand.metadata.slashEquivalent) foundCommand = client.commands.get(foundCommand.metadata.slashEquivalent);
-    
-    let tools = new Tools(client, int);
+    else if (foundCommand.metadata.slashEquivalent) {
+        foundCommand = client.commands.get(foundCommand.metadata.slashEquivalent);
+        // Si slashEquivalent no existe, el comando original se habría manejado,
+        // pero si quieres una advertencia, puedes agregarla aquí.if (!foundCommand) { console.error(`Slash equivalent "${foundCommand.metadata.slashEquivalent}" no encontrado.`); return; }}
+
+    // NOTA IMPORTANTE: La línea 'let tools = new Tools(client, int);' ha sido ELIMINADA de aquí.
+    // Ahora se usa la variable 'tools' que se definió al principio de la función 'interactionCreate'.
     
     // dev perm check
     if (foundCommand.metadata.dev && !tools.isDev()) return tools.warn("Only developers can use this!");
     else if (config.lockBotToDevOnly && !tools.isDev()) return tools.warn("Only developers can use this bot!");
     
-    try { await foundCommand.run(client, int, tools); }
-    catch(e) { console.error(e); int.reply({ content: "**Error!** " + e.message, ephemeral: true }); }
-    });
-    
+    try { 
+        // CAMBIADO: 'foundCommand.run' ahora usa la variable 'tools' que está en el ámbito superior.
+        // Esto es crucial para que tus comandos de economía reciban 'tools' correctamente.
+        await foundCommand.run(client, int, tools); 
+    } catch(e) { 
+        console.error(`Error ejecutando comando ${foundCommand.metadata?.name || int.commandName || 'Desconocido'}:`, e); // Mejorado el mensaje de error
+        if (int.replied || int.deferred) {
+            // AÑADIDO: .catch(() => {}) para manejar errores de promesa al responder
+            await int.followUp({ content: "**Error!** Hubo un problema al ejecutar este comando!", ephemeral: true }).catch(() => {}); 
+        } else {
+            // AÑADIDO: .catch(() => {}) para manejar errores de promesa al responder
+            await int.reply({ content: "**Error!** Hubo un problema al ejecutar este comando!", ephemeral: true }).catch(() => {}); 
+        }
+    }
+}}); // <-- MUY IMPORTANTE: Asegúrate de que este cierre de función (}); ) ESTÉ PRESENTE AL FINAL DE TU BLOQUE interactionCreate.
+
     client.on('error', e => console.warn(e));
     client.on('warn', e => console.warn(e));
     

@@ -93,7 +93,7 @@ TsaritsasVoice/
 	/addxp for manual XP addition
 	/rank to see your current XP and level
 	/top for the leaderboard
-	/rewardrole and /sync for role-based XP rewards
+	/rewardrole and /sync for role-based XP rewardsgit
 	/multiplier to set XP multipliers
   ```
   
