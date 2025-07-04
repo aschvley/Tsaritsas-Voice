@@ -1,6 +1,6 @@
 // Tsaritsa's-Voice/commands/buttons/commission_button_outcome.js
 
-const commissionsList = require('../../data/commissionsList.js');
+const commissionsList = require('../../../data/commissionsList.js');
 const { getOrCreateProfile } = require('../../../utils/economyUtils');
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
 
