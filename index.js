@@ -2,9 +2,9 @@ const Discord = require("discord.js");
 const fs = require("fs");
 
 const config = require("./config.json");
-// Asegúrate de que SlashCommandBuilder esté importado si lo usas en otros comandos
-// Y que REST y Routes se importen desde 'discord.js'
-const { EmbedBuilder, REST, Routes, SlashCommandBuilder } = require('discord.js'); // <-- CAMBIO AQUÍ
+
+// <--- MODIFICACIÓN: Ajuste de importaciones para evitar duplicidad y usar Discord.X directamente
+const { EmbedBuilder, REST, Routes, SlashCommandBuilder, ActivityType, Collection, GatewayIntentBits, Partials, Options } = Discord;
 const Tools = require("./classes/Tools.js");
 const Model = require("./classes/DatabaseModel.js");
 
@@ -29,8 +29,22 @@ const slashCommandsToRegister = []; // <-- ¡AÑADIDO AQUÍ!
 const client = new Discord.Client({
     allowedMentions: { parse: ["users"] },
     makeCache: Discord.Options.cacheWithLimits({ MessageManager: 0 }),
-    intents: ['Guilds', 'GuildMessages', 'DirectMessages', 'GuildVoiceStates', 'GuildMembers'].map(i => Discord.GatewayIntentBits[i]), // <-- Asegúrate de tener GuildMembers si lo necesitas para cosas como getOrCreateProfile
-    partials: ['Channel'].map(p => Discord.Partials[p]),
+    // <-- MODIFICACIÓN: Sintaxis de Intents y Partials ajustada y unificada con Discord.GatewayIntentBits
+    intents: [
+        Discord.GatewayIntentBits.Guilds,
+        Discord.GatewayIntentBits.GuildMessages,
+        Discord.GatewayIntentBits.MessageContent, // Importante para leer mensajes (ej. menciones)
+        Discord.GatewayIntentBits.GuildMembers, // Importante para getOrCreateProfile, etc.
+        // Si necesitas reacciones, descomenta la siguiente línea:
+        Discord.GatewayIntentBits.GuildMessageReactions,
+    ],
+    partials: [
+        Discord.Partials.Channel, // Necesario para DM si los usas
+        // Si necesitas mensajes, descomenta la siguiente línea:
+        Discord.Partials.Message,
+        // Si necesitas reacciones, descomenta la siguiente línea:
+        Discord.Partials.Reaction,
+    ],
     failIfNotExists: false
 });
 
@@ -110,7 +124,7 @@ fs.readdirSync(dir).forEach(type => {
     }
 });
 
-// button files
+// <--- MODIFICACIÓN: Aseguramos que client.buttons es una Discord.Collection antes de usarla
 client.buttons = new Discord.Collection();
 fs.readdirSync('./commands/button').filter(file => file.endsWith('.js')).forEach(file => {
     try {
@@ -129,6 +143,7 @@ fs.readdirSync('./commands/button').filter(file => file.endsWith('.js')).forEach
 client.statusData = rawStatus;
 client.updateStatus = function() {
     let status = client.statusData;
+    // <--- MODIFICACIÓN: Usar Discord.ActivityType directamente
     client.user.setPresence({ activities: status.type ? [{ name: status.name, state: status.state || undefined, type: Discord.ActivityType[status.type], url: status.url }] : [], status: status.status });
 };
 
@@ -158,18 +173,18 @@ client.on("ready", async () => {
     try {
         console.log(`Comenzando a registrar ${slashCommandsToRegister.length} comandos slash (/).`);
 
-            // **** AÑADE ESTAS LÍNEAS TEMPORALMENTE PARA DEPURAR ****
-    console.log("Contenido de slashCommandsToRegister:", JSON.stringify(slashCommandsToRegister, (key, value) => {
-        if (typeof value === 'bigint') {
-            return value.toString() + 'n'; // Convierte BigInt a string y añade 'n' para identificarlo
-        }
-        // También podemos buscar si algún valor numérico es extremadamente grande sin ser BigInt
-        if (typeof value === 'number' && value > Number.MAX_SAFE_INTEGER) {
-             return 'LARGE_NUMBER_POSSIBLE_BIGINT_ISSUE:' + value.toString();
-        }
-        return value;
-    }, 2));
-    // ******************************************************
+        // **** AÑADE ESTAS LÍNEAS TEMPORALMENTE PARA DEPURAR ****
+        console.log("Contenido de slashCommandsToRegister:", JSON.stringify(slashCommandsToRegister, (key, value) => {
+            if (typeof value === 'bigint') {
+                return value.toString() + 'n'; // Convierte BigInt a string y añade 'n' para identificarlo
+            }
+            // También podemos buscar si algún valor numérico es extremadamente grande sin ser BigInt
+            if (typeof value === 'number' && value > Number.MAX_SAFE_INTEGER) {
+                return 'LARGE_NUMBER_POSSIBLE_BIGINT_ISSUE:' + value.toString();
+            }
+            return value;
+        }, 2));
+        // ******************************************************
 
         const data = await rest.put(
             Routes.applicationCommands(client.user.id), // Registra comandos globalmente para tu aplicación
@@ -182,13 +197,13 @@ client.on("ready", async () => {
     // COMENTARIO: FIN DEL NUEVO BLOQUE DE REGISTRO DE COMANDOS SLASH
 
     // client.application.commands.fetch() // cache slash commands - Ya no es necesario si siempre registras
-    //     .then(cmds => {
-    //         if (cmds.size < 1) { // no commands!! deploy to test server
-    //             console.info("!!! No global commands found, deploying dev commands to test server (Use /deploy global=true to deploy global commands)");
-    //             // **COMENTADA LA LÍNEA QUE EJECUTABA DEPLOY AUTOMÁTICAMENTE:**
-    //             // client.commands.get("deploy").run(client, null, client.globalTools)
-    //         }
-    //     });
+    //      .then(cmds => {
+    //          if (cmds.size < 1) { // no commands!! deploy to test server
+    //              console.info("!!! No global commands found, deploying dev commands to test server (Use /deploy global=true to deploy global commands)");
+    //              // **COMENTADA LA LÍNEA QUE EJECUTABA DEPLOY AUTOMÁTICAMENTE:**
+    //              // client.commands.get("deploy").run(client, null, client.globalTools)
+    //          }
+    //      });
     // COMENTARIO: Bloque comentado, ya que el registro se hace arriba.
     // Si aún quieres un deploy condicional, la lógica deberá ser adaptada
     // para usar el 'rest.put' directamente en ese bloque, no el comando 'deploy'.
@@ -255,14 +270,69 @@ client.on("interactionCreate", async int => {
             if (int.customId.split("_")[1] != int.user.id) return int.deferUpdate();
             let configData = int.values[0].split("_").slice(1);
             let configCmd = (configData[0] == "dir" ? "button:settings_list" : "button:settings_view");
-            client.commands.get(configCmd).run(client, int, new Tools(client, int), configData);
+            // <--- MODIFICACIÓN: Usa client.buttons.get() para botones de configuración
+            const buttonHandler = client.buttons.get(configCmd);
+            if (buttonHandler && buttonHandler.run) {
+                try {
+                    await buttonHandler.run(client, int, tools, configData); // Usa la instancia 'tools' ya creada
+                } catch (error) {
+                    console.error('Error handling configmenu_ select:', error);
+                    await int.followUp({ content: 'Error processing config menu interaction!', ephemeral: true });
+                }
+            } else {
+                console.warn(`WARN: Config menu handler "${configCmd}" not found or missing 'run' method.`);
+                await int.followUp({ content: `Error: Could not find handler for ${configCmd}.`, ephemeral: true });
+            }
+        } else if (int.customId.startsWith('commission_select_')) {
+            // <--- MODIFICACIÓN: Manejo de select menus de comisión redirigido al comando /commission
+            const commissionCommand = client.commands.get('commission');
+            if (commissionCommand && commissionCommand.handleComponentInteraction) {
+                try {
+                    await commissionCommand.handleComponentInteraction(int);
+                } catch (error) {
+                    console.error('Error handling commission select menu:', error);
+                    await int.reply({ content: '❌ Error processing your commission selection.', ephemeral: true });
+                }
+            } else {
+                console.warn("WARN: Commission command or its component handler not found.");
+                await int.reply({ content: '❌ Could not find the commission command handler.', ephemeral: true });
+            }
         }
         return;
-    } else if (int.isModalSubmit() && int.customId.startsWith("configmodal")) {
-        let modalData = int.customId.split("~");
-        if (modalData[2] != int.user.id) return int.deferUpdate();
-        client.commands.get("button:settings_edit").run(client, int, new Tools(client, int), modalData[1]);
-        return;
+    } else if (int.isModalSubmit()) {
+        if (int.customId.startsWith("configmodal")) {
+            let modalData = int.customId.split("~");
+            if (modalData[2] != int.user.id) return int.deferUpdate();
+            // <--- MODIFICACIÓN: Usa client.buttons.get() para botones de configuración
+            const buttonHandler = client.buttons.get("button:settings_edit");
+            if (buttonHandler && buttonHandler.run) {
+                try {
+                    await buttonHandler.run(client, int, tools, modalData[1]); // Usa la instancia 'tools' ya creada
+                } catch (error) {
+                    console.error('Error handling configmodal submit:', error);
+                    await int.followUp({ content: 'Error processing config modal!', ephemeral: true });
+                }
+            } else {
+                console.warn(`WARN: Config modal handler "button:settings_edit" not found or missing 'run' method.`);
+                await int.followUp({ content: `Error: Could not find handler for button:settings_edit.`, ephemeral: true });
+            }
+            return;
+        } else if (int.customId.startsWith('commission_modal_')) {
+            // <--- MODIFICACIÓN: Manejo de modales de comisión redirigido al comando /commission
+            const commissionCommand = client.commands.get('commission');
+            if (commissionCommand && commissionCommand.handleComponentInteraction) {
+                try {
+                    await commissionCommand.handleComponentInteraction(int);
+                } catch (error) {
+                    console.error('Error handling commission modal submit:', error);
+                    await int.reply({ content: '❌ Error processing your commission modal submission.', ephemeral: true });
+                }
+            } else {
+                console.warn("WARN: Commission command or its component handler not found for modal.");
+                await int.reply({ content: '❌ Could not find the commission command handler for this modal.', ephemeral: true });
+            }
+            return;
+        }
     }
 
     // --- QOTD Button and Modal Handling ---
@@ -292,15 +362,19 @@ client.on("interactionCreate", async int => {
     // --- End QOTD Handling ---
 
     // --- Fatui Fact Button Handling ---
-    if (int.isButton() && (Object.keys(require('./fatui_facts.json').fatui_facts).map(key => key.toLowerCase()).includes(int.customId) || int.isButton() && int.customId === 'general')) {
+    // <--- MODIFICACIÓN: Asegurar que el nombre del botón de fatui-fact sea el correcto en client.buttons
+    if (int.isButton() && (Object.keys(require('./fatui_facts.json').fatui_facts).map(key => key.toLowerCase()).includes(int.customId) || int.customId === 'general')) {
         const button = client.buttons.get('fatui-fact-button'); // Asumo que tienes un manejador general para estos botones
-        if (button) {
+        if (button && button.run) { // Asegúrate de que el handler exista y tenga un método 'run'
             try {
-                await button.run(client, int, client.globalTools);
+                await button.run(client, int, tools); // Usa la instancia 'tools'
             } catch (error) {
                 console.error(`Error executing fatui-fact button ${int.customId}:`, error);
                 await int.reply({ content: 'There was an error while processing this Fatui fact!', ephemeral: true });
             }
+        } else {
+            console.warn(`WARN: Fatui fact button handler "fatui-fact-button" not found or missing 'run' method.`);
+            await int.reply({ content: `Error: Could not find handler for ${int.customId}.`, ephemeral: true });
         }
         return;
     }
@@ -357,33 +431,12 @@ client.on("interactionCreate", async int => {
     }
     // --- End ANNOUNCE Handling (Simplified with Button) ---
 
-// --- Commission Buttons Handling ---
-if (int.isButton() && int.customId.startsWith('commission_')) {
-    // Aquí ajustamos la lógica para los botones de comisión.
-    // Los nombres de los handlers en client.buttons deben coincidir con estos.
-    let commissionButtonHandlerName;
-    if (int.customId.startsWith('commission_button_outcome')) {
-        commissionButtonHandlerName = 'commission_button_outcome';
-    } else if (int.customId.startsWith('commission_multiple_choice')) {
-        commissionButtonHandlerName = 'commission_multiple_choice';
-    } else {
-        console.warn(`WARN: Unrecognized commission button CustomId: ${int.customId}`);
-        return await int.reply({ content: '❌ Unrecognized commission button type.', ephemeral: true });
-    }
+    // <--- MODIFICACIÓN: ELIMINADO POR COMPLETO EL BLOQUE REDUNDANTE DE COMMISSION BUTTONS HANDLING
+    // Este bloque fue eliminado porque la lógica de botones y selectores de comisión
+    // ahora se maneja dentro del comando '/commission' mismo, redirigido desde el
+    // 'if (int.isButton())' y 'if (int.isStringSelectMenu())' en este archivo.
 
-    const buttonHandler = client.buttons.get(commissionButtonHandlerName);
-    if (buttonHandler && buttonHandler.run) {
-        try {
-            await buttonHandler.run(int); // Se pasa solo la interacción, como esperan tus handlers
-        } catch (error) {
-            console.error(`Error executing commission button ${int.customId}:`, error);
-            await int.reply({ content: '❌ Error processing your commission button.', ephemeral: true });
-        }
-    }
-    return;
-}
-
-// general commands and buttons
+    // general commands and buttons
     let foundCommand;
 
     // Aquí manejamos si es un comando de chat (slash)
@@ -396,6 +449,23 @@ if (int.isButton() && int.customId.startsWith('commission_')) {
         // `interaction.options.getSubcommand()` para el routing.
         
     } else if (int.isButton()) { // Si es un botón
+        // <--- MODIFICACIÓN: Manejo de botones de comisión redirigido al comando /commission
+        if (int.customId.startsWith('commission_')) {
+            foundCommand = client.commands.get('commission');
+            if (foundCommand && foundCommand.handleComponentInteraction) {
+                try {
+                    await foundCommand.handleComponentInteraction(int);
+                } catch (error) {
+                    console.error('Error handling commission button:', error);
+                    await int.reply({ content: '❌ Error processing your commission button.', ephemeral: true });
+                }
+            } else {
+                console.warn("WARN: Commission command or its component handler not found for button.");
+                await int.reply({ content: '❌ Could not find the commission command handler for this button.', ephemeral: true });
+            }
+            return; // Importante: salir después de manejar la comisión
+        }
+        // Si no es un botón de comisión, busca en client.buttons (para otros botones generales)
         foundCommand = client.buttons.get(int.customId.split("~")[0]); // Asumiendo que tus botones están en client.buttons
     }
     // Puedes añadir más `else if` para otros tipos de interacción que no se hayan manejado arriba
@@ -420,6 +490,7 @@ if (int.isButton() && int.customId.startsWith('commission_')) {
     else if (config.lockBotToDevOnly && !tools.isDev()) return tools.warn("Only developers can use this bot!");
     
     try { 
+        // <--- MODIFICACIÓN: Asegurar que se pase 'tools' a la función run
         await foundCommand.run(client, int, tools); 
     } catch(e) { 
         console.error(`Error ejecutando comando ${foundCommand.metadata?.name || int.commandName || 'Desconocido'}:`, e);
