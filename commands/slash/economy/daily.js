@@ -1,7 +1,7 @@
 // Tsaritsa's-Voice/commands/slash/economy/daily.js
 
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const UserEconomy = require('../../../utils/UserEconomy');
+const UserEconomy = require('../../../models/UserEconomy');
 
 const DAILY_AMOUNT = 500;
 const COOLDOWN = 24 * 60 * 60 * 1000;

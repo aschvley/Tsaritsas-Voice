@@ -1,7 +1,7 @@
 // Tsaritsa's-Voice/commands/slash/economy/work.js
 
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const UserEconomy = require('../../../utils/UserEconomy');
+const UserEconomy = require('../../../models/UserEconomy');
 
 const WORK_MIN_AMOUNT = 100;
 const WORK_MAX_AMOUNT = 300;

@@ -1,7 +1,7 @@
 // Tsaritsa's-Voice/commands/slash/economy/give.js
 
 const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
-const UserEconomy = require('../../../utils/UserEconomy'); // Ruta ajustada
+const UserEconomy = require('../../../models/UserEconomy'); // Ruta ajustada
 
 const MORA_EMOJI = '<:mora:1390470693648470026>'; // Tu emoji personalizado
 
