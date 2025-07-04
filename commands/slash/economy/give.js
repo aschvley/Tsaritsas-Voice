@@ -35,6 +35,19 @@ module.exports = {
         const targetUser = interaction.options.getUser('usuario');
         const amount = interaction.options.getInteger('cantidad');
 
+            // AÑADE ESTE LOG PARA DEPURAR
+    console.log(`Debug give: targetUser ->`, targetUser);
+    console.log(`Debug give: amount ->`, amount);
+
+    if (!targetUser) { // Añade este chequeo explícito
+        const errorEmbed = new EmbedBuilder()
+            .setColor('Red')
+            .setDescription(`❌ The specified user could not be found.`)
+            .setTimestamp()
+            .setFooter({ text: 'Tsaritsa\'s Voice Economy System', iconURL: client.user.displayAvatarURL() });
+        return await interaction.editReply({ embeds: [errorEmbed] });
+    }
+
         // Evitar que un usuario se dé mora a sí mismo si no lo deseas
         if (targetUser.id === interaction.user.id) {
             const selfGiveEmbed = new EmbedBuilder()

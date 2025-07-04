@@ -157,6 +157,20 @@ client.on("ready", async () => {
     const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
     try {
         console.log(`Comenzando a registrar ${slashCommandsToRegister.length} comandos slash (/).`);
+
+            // **** AÑADE ESTAS LÍNEAS TEMPORALMENTE PARA DEPURAR ****
+    console.log("Contenido de slashCommandsToRegister:", JSON.stringify(slashCommandsToRegister, (key, value) => {
+        if (typeof value === 'bigint') {
+            return value.toString() + 'n'; // Convierte BigInt a string y añade 'n' para identificarlo
+        }
+        // También podemos buscar si algún valor numérico es extremadamente grande sin ser BigInt
+        if (typeof value === 'number' && value > Number.MAX_SAFE_INTEGER) {
+             return 'LARGE_NUMBER_POSSIBLE_BIGINT_ISSUE:' + value.toString();
+        }
+        return value;
+    }, 2));
+    // ******************************************************
+
         const data = await rest.put(
             Routes.applicationCommands(client.user.id), // Registra comandos globalmente para tu aplicación
             { body: slashCommandsToRegister },
