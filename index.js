@@ -2,7 +2,9 @@ const Discord = require("discord.js");
 const fs = require("fs");
 
 const config = require("./config.json");
-const { EmbedBuilder } = require('discord.js');
+// Asegúrate de que SlashCommandBuilder esté importado si lo usas en otros comandos
+// Y que REST y Routes se importen desde 'discord.js'
+const { EmbedBuilder, REST, Routes, SlashCommandBuilder } = require('discord.js'); // <-- CAMBIO AQUÍ
 const Tools = require("./classes/Tools.js");
 const Model = require("./classes/DatabaseModel.js");
 
@@ -20,11 +22,14 @@ const version = require("./json/auto/version.json");
 
 const startTime = Date.now();
 
+// COMENTARIO: NUEVO ARRAY para recolectar los datos de los comandos slash a registrar en Discord
+const slashCommandsToRegister = []; // <-- ¡AÑADIDO AQUÍ!
+
 // create client
 const client = new Discord.Client({
     allowedMentions: { parse: ["users"] },
     makeCache: Discord.Options.cacheWithLimits({ MessageManager: 0 }),
-    intents: ['Guilds', 'GuildMessages', 'DirectMessages', 'GuildVoiceStates'].map(i => Discord.GatewayIntentBits[i]),
+    intents: ['Guilds', 'GuildMessages', 'DirectMessages', 'GuildVoiceStates', 'GuildMembers'].map(i => Discord.GatewayIntentBits[i]), // <-- Asegúrate de tener GuildMembers si lo necesitas para cosas como getOrCreateProfile
     partials: ['Channel'].map(p => Discord.Partials[p]),
     failIfNotExists: false
 });
@@ -62,23 +67,41 @@ fs.readdirSync(dir).forEach(type => {
             if (fs.statSync(fullSubDirPath).isDirectory()) {
                 fs.readdirSync(fullSubDirPath).filter(x => x.endsWith(".js")).forEach(file => {
                     let command = require(fullSubDirPath + "/" + file);
-                    if (!command.metadata) command.metadata = { name: file.split(".js")[0] };
-                    command.metadata.type = 'slash';
-                    command.metadata.category = slashSubDir;
-                    client.commands.set(command.metadata.name, command);
-                    console.log(`Comando /${slashSubDir}/${command.metadata.name} cargado.`);
+                    // COMENTARIO: REVISIÓN CRÍTICA AQUÍ PARA MANEJAR SLASHCOMMANDBUILDER
+                    if (command.metadata instanceof SlashCommandBuilder) { // <-- ¡CAMBIO CLAVE! Si ya es un SlashCommandBuilder
+                        client.commands.set(command.metadata.name, command); // Usa el nombre del SlashCommandBuilder
+                        slashCommandsToRegister.push(command.metadata.toJSON()); // <-- ¡AÑADIDO Y CLAVE!
+                        console.log(`Comando /${slashSubDir}/${command.metadata.name} cargado y listo para registro.`);
+                    } else if (command.metadata) { // Si tiene metadata pero no es un SlashCommandBuilder (es un objeto simple)
+                        command.metadata.type = 'slash';
+                        command.metadata.category = slashSubDir;
+                        client.commands.set(command.metadata.name, command);
+                        // No lo añadimos a slashCommandsToRegister aquí si es un objeto simple,
+                        // porque los comandos slash de Discord API necesitan un formato específico de SlashCommandBuilder.
+                        // Solo los que son instanceof SlashCommandBuilder irán al registro API.
+                        console.log(`Comando /${slashSubDir}/${command.metadata.name} (legacy metadata) cargado.`);
+                    }
                 });
             } else if (slashSubDir.endsWith(".js")) {
                 let command = require(fullSubDirPath);
-                if (!command.metadata) command.metadata = { name: slashSubDir.split(".js")[0] };
-                command.metadata.type = 'slash';
-                client.commands.set(command.metadata.name, command);
-                console.log(`Comando /${command.metadata.name} cargado.`);
+                // COMENTARIO: REVISIÓN CRÍTICA AQUÍ PARA MANEJAR SLASHCOMMANDBUILDER
+                if (command.metadata instanceof SlashCommandBuilder) { // <-- ¡CAMBIO CLAVE!
+                    client.commands.set(command.metadata.name, command);
+                    slashCommandsToRegister.push(command.metadata.toJSON()); // <-- ¡AÑADIDO Y CLAVE!
+                    console.log(`Comando /${command.metadata.name} cargado y listo para registro.`);
+                } else if (command.metadata) { // Si tiene metadata pero no es un SlashCommandBuilder
+                    command.metadata.type = 'slash';
+                    client.commands.set(command.metadata.name, command);
+                    console.log(`Comando /${command.metadata.name} (legacy metadata) cargado.`);
+                }
             }
         });
     } else {
+        // Esta parte es para comandos de tipo 'message' o 'text' que no son slash commands.
+        // Asumo que no necesitan ser registrados en la API de Discord como slash commands.
         fs.readdirSync(dir + type).filter(x => x.endsWith(".js")).forEach(file => {
             let command = require(dir + type + "/" + file);
+            // Si no tienen metadata, crea una básica (para comandos de texto, etc.)
             if (!command.metadata) command.metadata = { name: file.split(".js")[0] };
             command.metadata.type = type;
             client.commands.set(command.metadata.name, command);
@@ -130,14 +153,32 @@ client.on("ready", async () => {
 
     await connectMongooseDB(); // Llamada a la función de conexión a Mongoose DB aquí
 
-    client.application.commands.fetch() // cache slash commands
-        .then(cmds => {
-            if (cmds.size < 1) { // no commands!! deploy to test server
-                console.info("!!! No global commands found, deploying dev commands to test server (Use /deploy global=true to deploy global commands)");
-                // **COMENTADA LA LÍNEA QUE EJECUTABA DEPLOY AUTOMÁTICAMENTE:**
-                // client.commands.get("deploy").run(client, null, client.globalTools)
-            }
-        });
+    // COMENTARIO: INICIO DEL NUEVO BLOQUE DE REGISTRO DE COMANDOS SLASH
+    const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
+    try {
+        console.log(`Comenzando a registrar ${slashCommandsToRegister.length} comandos slash (/).`);
+        const data = await rest.put(
+            Routes.applicationCommands(client.user.id), // Registra comandos globalmente para tu aplicación
+            { body: slashCommandsToRegister },
+        );
+        console.log(`Se recargaron ${data.length} comandos slash (/) exitosamente.`);
+    } catch (error) {
+        console.error('Error al registrar comandos slash:', error);
+    }
+    // COMENTARIO: FIN DEL NUEVO BLOQUE DE REGISTRO DE COMANDOS SLASH
+
+    // client.application.commands.fetch() // cache slash commands - Ya no es necesario si siempre registras
+    //     .then(cmds => {
+    //         if (cmds.size < 1) { // no commands!! deploy to test server
+    //             console.info("!!! No global commands found, deploying dev commands to test server (Use /deploy global=true to deploy global commands)");
+    //             // **COMENTADA LA LÍNEA QUE EJECUTABA DEPLOY AUTOMÁTICAMENTE:**
+    //             // client.commands.get("deploy").run(client, null, client.globalTools)
+    //         }
+    //     });
+    // COMENTARIO: Bloque comentado, ya que el registro se hace arriba.
+    // Si aún quieres un deploy condicional, la lógica deberá ser adaptada
+    // para usar el 'rest.put' directamente en ese bloque, no el comando 'deploy'.
+
 
     client.updateStatus();
     setInterval(client.updateStatus, 15 * 60000);
@@ -177,7 +218,13 @@ client.on("messageCreate", async message => {
             }
         } else {
             // Ejecutar el comando de mensaje normal si no es una mención
-            client.commands.get("message").run(client, message, client.globalTools);
+            // Verifica si client.commands.get("message") existe antes de intentar ejecutarlo
+            const messageCommand = client.commands.get("message");
+            if (messageCommand && messageCommand.run) {
+                messageCommand.run(client, message, client.globalTools);
+            } else {
+                // console.warn("Comando 'message' no encontrado o no tiene una función 'run'.");
+            }
         }
         // --- FIN DEL MANEJO DE MENCIONES ---
     }
@@ -232,7 +279,7 @@ client.on("interactionCreate", async int => {
 
     // --- Fatui Fact Button Handling ---
     if (int.isButton() && (Object.keys(require('./fatui_facts.json').fatui_facts).map(key => key.toLowerCase()).includes(int.customId) || int.isButton() && int.customId === 'general')) {
-        const button = client.buttons.get('fatui-fact-button');
+        const button = client.buttons.get('fatui-fact-button'); // Asumo que tienes un manejador general para estos botones
         if (button) {
             try {
                 await button.run(client, int, client.globalTools);
@@ -297,17 +344,17 @@ client.on("interactionCreate", async int => {
     // --- End ANNOUNCE Handling (Simplified with Button) ---
 
 // --- Commission Buttons Handling ---
-if (int.isButton() && int.customId.startsWith('commission_')) { // CAMBIO AQUÍ: 'interaction' a 'int'
-  const buttonHandler = client.buttons.get(int.customId.split('~')[0]); // CAMBIO AQUÍ
-  if (buttonHandler) {
-    try {
-      await buttonHandler.run(client, int, client.globalTools); // CAMBIO AQUÍ
-    } catch (error) {
-      console.error(`Error executing commission button ${int.customId}:`, error); // CAMBIO AQUÍ
-      await int.reply({ content: '❌ Error processing your commission button.', ephemeral: true }); // CAMBIO AQUÍ
+if (int.isButton() && int.customId.startsWith('commission_')) {
+    const buttonHandler = client.buttons.get(int.customId.split('_')[0]); // Corregido el split para customId
+    if (buttonHandler) {
+        try {
+            await buttonHandler.run(client, int, client.globalTools);
+        } catch (error) {
+            console.error(`Error executing commission button ${int.customId}:`, error);
+            await int.reply({ content: '❌ Error processing your commission button.', ephemeral: true });
+        }
     }
-  }
-  return;
+    return;
 }
 // --- End COMMISSIONS Handling
 

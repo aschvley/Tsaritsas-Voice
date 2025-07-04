@@ -180,7 +180,7 @@ module.exports = {
 
                 await interaction.reply({ content: `🗑 You skipped a mission: ${skipped.id}`, ephemeral: true });
             }
-            // Fallback en caso de que el subcomando no se encuentre (no debería ocurrir si todo está bien definido)
+            // Fallback en caso de que el subcomando no se encuentre (no debería ocurrir si está bien definido td)
             else {
                 await interaction.reply({ content: 'Subcommand of commission not recognized.', ephemeral: true });
             }
