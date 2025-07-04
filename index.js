@@ -296,6 +296,21 @@ client.on("interactionCreate", async int => {
     }
     // --- End ANNOUNCE Handling (Simplified with Button) ---
 
+    // --- Commission Buttons Handling ---
+if (interaction.isButton() && interaction.customId.startsWith('commission_')) {
+  const buttonHandler = client.buttons.get(interaction.customId.split('~')[0]);
+  if (buttonHandler) {
+    try {
+      await buttonHandler.run(client, interaction, client.globalTools);
+    } catch (error) {
+      console.error(`Error executing commission button ${interaction.customId}:`, error);
+      await interaction.reply({ content: '❌ Error processing your commission button.', ephemeral: true });
+    }
+  }
+  return;
+}
+     // --- End COMMISSIONS Handling
+
     // general commands and buttons
     let foundCommand = client.commands.get(int.isButton() ? `button:${int.customId.split("~")[0]}` : int.commandName);
     if (!foundCommand) return;
