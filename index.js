@@ -382,23 +382,31 @@ if (int.isButton() && int.customId.startsWith('commission_')) {
     }
     return;
 }
-// --- End COMMISSIONS Handling
 
-    // general commands and buttons
-    let foundCommand; // Cambiamos de `let foundCommand = ...` directo a definir y luego asignar
-    if (int.isChatInputCommand()) { // Si es un comando slash (ej. /give, /commission)
+// general commands and buttons
+    let foundCommand;
+
+    // Aquí manejamos si es un comando de chat (slash)
+    if (int.isChatInputCommand()) {
+        // Obtenemos el comando principal por su nombre (ej. 'give', 'commission')
         foundCommand = client.commands.get(int.commandName);
-    } else if (int.isButton()) { // Si es un botón que no fue manejado por los bloques específicos de arriba
-        foundCommand = client.commands.get(`button:${int.customId.split("~")[0]}`);
+        
+        // No necesitamos buscar subcomandos o grupos aquí.
+        // El archivo del comando (ej. 'commission.js') manejará internamente
+        // `interaction.options.getSubcommand()` para el routing.
+        
+    } else if (int.isButton()) { // Si es un botón
+        foundCommand = client.buttons.get(int.customId.split("~")[0]); // Asumiendo que tus botones están en client.buttons
     }
-    // Si no es un comando slash ni un botón capturado, `foundCommand` será `undefined`
+    // Puedes añadir más `else if` para otros tipos de interacción que no se hayan manejado arriba
+
     if (!foundCommand) {
         // Si no se encuentra un comando/botón válido, simplemente salimos.
         return; 
     }
 
-    // else if (foundCommand.metadata.slashEquivalent) {  <--- Este if es el que cambia de lugar
-    // Llevamos la lógica de `slashEquivalent` aquí para que se aplique después de encontrar el comando inicial
+    // Mantenemos la lógica de slashEquivalent si la necesitas para comandos híbridos,
+    // pero para 'give' y 'commission' que son puros slash, esto probablemente no se ejecutará.
     if (foundCommand.metadata?.slashEquivalent) { 
         foundCommand = client.commands.get(foundCommand.metadata.slashEquivalent);
         if (!foundCommand) {
