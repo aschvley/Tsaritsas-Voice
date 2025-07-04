@@ -8,7 +8,7 @@ module.exports = {
     .setName('inventory')
     .setDescription('Check your current resources'),
 
-  async run(interaction) {
+  async run(client, interaction, tools) {
     const profile = await getOrCreateProfile(interaction.user.id);
 
     const embed = new EmbedBuilder()

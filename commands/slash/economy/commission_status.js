@@ -10,7 +10,7 @@ module.exports = {
     .setDescription('Interact with your current missions')
     .addSubcommand(sub => sub.setName('status').setDescription('Check your current mission status')),
 
-  async run(interaction) {
+  async run(client, interaction, tools) {
     const userId = interaction.user.id;
     const profile = await getOrCreateProfile(userId);
 

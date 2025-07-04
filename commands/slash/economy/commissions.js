@@ -9,7 +9,7 @@ module.exports = {
     .setName('commissions')
     .setDescription('Check your daily Fatui missions.'),
 
-  async run(interaction) {
+  async run(client, interaction, tools) {
     const userId = interaction.user.id;
     const profile = await getOrCreateProfile(userId);
 

@@ -26,7 +26,7 @@ module.exports = {
         )
     ),
 
-  async run(interaction) {
+  async run(client, interaction, tools) {
     const userId = interaction.user.id;
     const num = interaction.options.getInteger('number');
     const profile = await getOrCreateProfile(userId);
