@@ -1,5 +1,6 @@
 // commands/slash/economy/commission.js
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const { getOrCreateProfile, ensureDailyCommissions, completeCommissionOutcome } = require('../../../utils/economyUtils');
 const UserEconomy = require('../../../models/UserEconomy'); // Asegúrate de tener este modelo
 const commissionsList = require('../../../data/commissionsList'); // Asegúrate de la ruta correcta
@@ -30,9 +31,11 @@ module.exports = {
                 .setDescription('Skip one daily commission for today.')
         ),
 
-    async execute(interaction) {
+    // <--- MODIFICACIÓN CRÍTICA: Cambiado de 'execute' a 'run' y añadido 'client', 'tools'
+    async run(client, interaction, tools) { // Aquí se recibe client y tools
         await interaction.deferReply({ ephemeral: true });
 
+        // Ya tenías esto, que está perfecto para asegurar el perfil y las comisiones
         const userProfile = await getOrCreateProfile(interaction.user.id);
         await ensureDailyCommissions(userProfile);
         await userProfile.save();
@@ -219,9 +222,13 @@ module.exports = {
             await interaction.editReply(`You skipped the mission: **[[${skippedName}]]**. You can skip another one tomorrow.`);
         }
     },
-    
+
     // Función para manejar las interacciones de componentes (botones y selectores) de las comisiones
     async handleComponentInteraction(interaction) {
+        // <--- MODIFICACIÓN: Crear Tools aquí si es necesario, o asume que no la usas en este handler
+        // const client = interaction.client;
+        // const tools = new Tools(client, interaction); 
+
         await interaction.deferUpdate(); // Deferir la actualización para que el usuario sepa que se está procesando
 
         // El customId tendrá el formato: 'commission_select_<missionID>' o 'commission_button_<missionID>_<outcomeIndex>'
@@ -252,7 +259,19 @@ module.exports = {
             if (selectedOption && commissionDetails.outcomes[selectedOption.outcome]) {
                 outcomeData = commissionDetails.outcomes[selectedOption.outcome]; // Obtener el objeto de outcome real
             }
+        } else if (componentType === 'modal') { // <--- Añadido para el manejo de modales
+            // Asume que tu modal customId es 'commission_modal_<missionID>'
+            const modalInput = interaction.fields.getTextInputValue('commission_modal_input'); // Reemplaza 'commission_modal_input' con el ID real de tu TextInput
+            // Aquí puedes procesar el input del modal. outcomeData podría depender de este input.
+            // Por ejemplo, podrías tener un outcome específico basado en el input o una lógica más compleja.
+            // Para este ejemplo, solo usaremos un mensaje genérico.
+            outcomeData = {
+                message: `You submitted: "${modalInput}". Processing the result...`,
+                rewards: { mora: 20, reputation: 1 } // Ejemplo de recompensa para el modal
+            };
+            await interaction.deferUpdate(); // Para modales, ya deferiste la respuesta inicial
         }
+
 
         if (!outcomeData) {
             return interaction.followUp({ content: 'Could not process your choice for the commission. Outcome data missing.', ephemeral: true });
