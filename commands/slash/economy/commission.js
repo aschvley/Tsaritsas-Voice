@@ -37,7 +37,7 @@ module.exports = {
 
         // Ya tenías esto, que está perfecto para asegurar el perfil y las comisiones
         const userProfile = await getOrCreateProfile(interaction.user.id);
-        await ensureDailyCommissions(userProfile);
+        await ensureDailyCommissions(userProfile.userId);
         await userProfile.save();
 
         const command = interaction.options.getSubcommand();
