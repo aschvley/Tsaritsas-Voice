@@ -1,6 +1,7 @@
 // Tsaritsa's-Voice/commands/buttons/commission_button_outcome.js
 
-const commissionsList = require('../../../data/commissionsList');
+const commissionsList = require('../../data/commissionsList.js'); // Con la extensión .js explícita para mayor claridad
+// o puedes dejarlo sin .js si prefieres: const commissionsList = require('../../data/commissionsList');
 const { getOrCreateProfile } = require('../../../utils/economyUtils');
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
 
