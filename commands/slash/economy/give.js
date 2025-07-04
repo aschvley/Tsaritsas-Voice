@@ -6,12 +6,14 @@ const UserEconomy = require('../../../models/UserEconomy'); // Ruta ajustada
 const MORA_EMOJI = '<:mora:1390470693648470026>'; // Tu emoji personalizado
 
 module.exports = {
-    metadata: {
-        name: 'give',
-        type: 'slash',
-        category: 'economy',
-    },
-    data: new SlashCommandBuilder()
+    // Elimina el objeto metadata extra si solo tiene name, type, category
+    // metadata: {
+    //     name: 'give',
+    //     type: 'slash',
+    //     category: 'economy',
+    // },
+    // **¡AQUÍ ESTÁ EL CAMBIO! 'data' debe ser 'metadata' para que tu cargador de comandos lo lea.**
+    metadata: new SlashCommandBuilder() // <-- CAMBIADO DE 'data' A 'metadata'
         .setName('give')
         .setDescription('Give mora to other user')
         .addUserOption(option =>
