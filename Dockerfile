@@ -1,5 +1,5 @@
 # Usamos una imagen base de Node.js (versión 22 en modo slim para producción)
-FROM node:22-slim
+FROM node:22-bookworm-slim
 
 # Instalamos las herramientas necesarias para compilar dependencias nativas,
 # además de git y bash, que algunas librerías pueden requerir
