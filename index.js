@@ -296,20 +296,20 @@ client.on("interactionCreate", async int => {
     }
     // --- End ANNOUNCE Handling (Simplified with Button) ---
 
-    // --- Commission Buttons Handling ---
-if (interaction.isButton() && interaction.customId.startsWith('commission_')) {
-  const buttonHandler = client.buttons.get(interaction.customId.split('~')[0]);
+// --- Commission Buttons Handling ---
+if (int.isButton() && int.customId.startsWith('commission_')) { // CAMBIO AQUÍ: 'interaction' a 'int'
+  const buttonHandler = client.buttons.get(int.customId.split('~')[0]); // CAMBIO AQUÍ
   if (buttonHandler) {
     try {
-      await buttonHandler.run(client, interaction, client.globalTools);
+      await buttonHandler.run(client, int, client.globalTools); // CAMBIO AQUÍ
     } catch (error) {
-      console.error(`Error executing commission button ${interaction.customId}:`, error);
-      await interaction.reply({ content: '❌ Error processing your commission button.', ephemeral: true });
+      console.error(`Error executing commission button ${int.customId}:`, error); // CAMBIO AQUÍ
+      await int.reply({ content: '❌ Error processing your commission button.', ephemeral: true }); // CAMBIO AQUÍ
     }
   }
   return;
 }
-     // --- End COMMISSIONS Handling
+// --- End COMMISSIONS Handling
 
     // general commands and buttons
     let foundCommand = client.commands.get(int.isButton() ? `button:${int.customId.split("~")[0]}` : int.commandName);
