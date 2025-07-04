@@ -6,11 +6,8 @@ const { EmbedBuilder } = require('discord.js');
 
 module.exports = {
     metadata: {
-        // CAMBIO: Es importante que este nombre sea descriptivo, el nombre de tu archivo es commission_multiple_choice.js
-        // Pero el metadata.name es commission_button_outcome. Asegúrate de que tu cargador de botones
-        // usa el customId real del componente (ej. 'commission_select_X') para disparar esto.
-        // Si este archivo maneja 'commission_select_X', su nombre de metadatos debería reflejarlo.
-        name: 'commission_multiple_choice_handler', // Cambié el nombre para ser más preciso.
+        // CAMBIO: ACORTAR ESTE NOMBRE. Era 'commission_multiple_choice_handler'
+        name: 'commission_multiple_choice', // Lo acortamos a 26 caracteres, que es seguro.
     },
 
     async run(interaction) {
