@@ -9,15 +9,12 @@ const COOLDOWN = 24 * 60 * 60 * 1000;
 const MORA_EMOJI = '<:mora:1390470693648470026>';
 
 module.exports = {
-    metadata: {
-        name: 'daily',
-        type: 'slash',
-        category: 'economy',
-    },
-    data: new SlashCommandBuilder()
+    // ¡¡¡CAMBIO CRÍTICO AQUÍ!!!
+    // El SlashCommandBuilder debe ser directamente la propiedad 'metadata'
+    metadata: new SlashCommandBuilder()
         .setName('daily')
         .setDescription('Claim your daily mora.'),
-    
+
     async run(client, interaction, tools) {
         await interaction.deferReply({ ephemeral: false });
 
@@ -52,7 +49,6 @@ module.exports = {
             const successEmbed = new EmbedBuilder()
                 .setColor('Green')
                 .setTitle('🎉 Daily Mora claimed! 🎉')
-                // --- CAMBIO AQUÍ: Usando el emoji personalizado ---
                 .setDescription(`You have claimed **${DAILY_AMOUNT} ${MORA_EMOJI} mora** from your daily reward.\nYour new balance is: **${userProfile.balance} ${MORA_EMOJI} mora**.`)
                 .setTimestamp()
                 .setFooter({ text: 'Tsaritsa\'s Voice Economy System', iconURL: client.user.displayAvatarURL() });

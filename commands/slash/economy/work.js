@@ -23,15 +23,14 @@ const WORK_MESSAGES = [
 ];
 
 module.exports = {
-    metadata: {
-        name: 'work',
-        type: 'slash',
-        category: 'economy',
-    },
-    data: new SlashCommandBuilder()
+    // ¡¡¡CAMBIO CRÍTICO AQUÍ!!!
+    // El SlashCommandBuilder debe ser directamente la propiedad 'metadata'
+    metadata: new SlashCommandBuilder()
         .setName('work')
         .setDescription('Work and get some mora.'),
-    
+    // Ya no necesitas la propiedad 'data' separada para el SlashCommandBuilder
+    // ni el objeto 'metadata' plano.
+
     async run(client, interaction, tools) {
         await interaction.deferReply({ ephemeral: false });
 

@@ -6,15 +6,12 @@ const UserEconomy = require('../../../models/UserEconomy'); // Ruta ajustada
 const MORA_EMOJI = '<:mora:1390470693648470026>'; // Tu emoji personalizado
 
 module.exports = {
-    metadata: {
-        name: 'leaderboard',
-        type: 'slash',
-        category: 'economy',
-    },
-    data: new SlashCommandBuilder()
+    // ¡¡¡CAMBIO CRÍTICO AQUÍ!!!
+    // El SlashCommandBuilder debe ser directamente la propiedad 'metadata'
+    metadata: new SlashCommandBuilder()
         .setName('leaderboard')
         .setDescription('Shows the users with the most mora.'),
-    
+        
     async run(client, interaction, tools) {
         await interaction.deferReply({ ephemeral: false });
 

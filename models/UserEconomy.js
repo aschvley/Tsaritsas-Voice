@@ -31,21 +31,23 @@ const UserEconomySchema = new mongoose.Schema({
         default: 0,
         min: 0
     },
-    dailyCommissions: {
-        type: [String], // IDs o claves de las comisiones asignadas
-        default: []
-    },
-    acceptedCommission: {
+    // ¡CAMBIO AQUÍ! Ahora es un array de objetos
+    dailyCommissions: [{
+        id: { type: String, required: true },
+        completed: { type: Boolean, default: false },
+        // Puedes añadir más campos si lo necesitas, como 'currentStep', 'progress', etc.
+    }],
+    acceptedCommission: { // Este debería almacenar el ID de la misión aceptada actualmente para el progreso
         type: String,
-        default: null // ID de la comisión aceptada (solo una a la vez)
+        default: null
     },
     lastCommissionDate: {
         type: Date,
-        default: null // Para limitar la generación diaria
+        default: null
     },
     skippedCommission: {
         type: Boolean,
-        default: false // Solo puede saltarse una por día
+        default: false
     }
 });
 

@@ -7,11 +7,11 @@ const {
     ActionRowBuilder,
     ButtonStyle,
     StringSelectMenuBuilder,
-    // Puedes necesitar estas si las usas en otras partes de tus subcomandos
 } = require('discord.js');
 
 const commissionsList = require('../../../data/commissionsList');
-const { getOrCreateProfile } = require('../../../utils/economyUtils');
+// Asegúrate de importar resetCommissionsIfNewDay si lo vas a usar en 'skip'
+const { getOrCreateProfile, resetCommissionsIfNewDay } = require('../../../utils/economyUtils'); 
 
 module.exports = {
     // metadata para el comando principal '/commission'
@@ -45,18 +45,25 @@ module.exports = {
         const subCommandName = interaction.options.getSubcommand();
 
         try {
+            // Deferir la respuesta al inicio para todos los subcomandos
+            await interaction.deferReply({ ephemeral: true }); 
+
+            const userId = interaction.user.id;
+            const profile = await getOrCreateProfile(userId);
+
             // Lógica para el subcomando 'status'
             if (subCommandName === 'status') {
-                const userId = interaction.user.id;
-                const profile = await getOrCreateProfile(userId);
-
-                if (!profile.commissions || profile.commissions.length === 0) {
-                    return interaction.reply({ content: 'You don\'t have any assigned missions yet. Use /commissions to get them.', ephemeral: true });
+                // CAMBIO: Usar profile.dailyCommissions
+                if (!profile.dailyCommissions || profile.dailyCommissions.length === 0) {
+                    return interaction.editReply({ content: 'You don\'t have any assigned missions yet. Use /commissions to get them.' });
                 }
 
-                const description = profile.commissions.map((c, i) => {
+                // CAMBIO: c es ahora un objeto { id: "...", completed: boolean }
+                const description = profile.dailyCommissions.map((c, i) => {
                     const data = commissionsList.find(x => x.id === c.id);
-                    return `**${i + 1}. [${data.title}]** — ${c.completed ? '✅ Completed' : '🕒 Pending'}`;
+                    // Asegúrate de que 'data' exista antes de acceder a data.title
+                    const title = data ? data.title : 'Unknown Mission';
+                    return `**${i + 1}. [${title}]** — ${c.completed ? '✅ Completed' : '🕒 Pending'}`;
                 }).join('\n');
 
                 const embed = new EmbedBuilder()
@@ -65,53 +72,73 @@ module.exports = {
                     .setColor(0xfacc15)
                     .setTimestamp();
 
-                await interaction.reply({ embeds: [embed], ephemeral: true });
-
+                await interaction.editReply({ embeds: [embed] }); // Usar editReply
             }
             // Lógica para el subcomando 'claim'
             else if (subCommandName === 'claim') {
-                const userId = interaction.user.id;
                 const num = interaction.options.getInteger('number');
-                const profile = await getOrCreateProfile(userId);
-
-                if (!profile.commissions || !profile.commissions[num - 1]) {
-                    return interaction.reply({
+                
+                // CAMBIO: Usar profile.dailyCommissions
+                if (!profile.dailyCommissions || num < 1 || num > profile.dailyCommissions.length) {
+                    return interaction.editReply({ // Usar editReply
                         content: '❌ There is no mission in that slot.',
-                        ephemeral: true,
                     });
                 }
 
-                const commission = profile.commissions[num - 1];
+                const commission = profile.dailyCommissions[num - 1]; // Obtener el objeto comisión
+                const data = commissionsList.find(x => x.id === commission.id); // 'data' debe existir para continuar
+
+                if (!data) { // Si la comisión no se encuentra en commissionsList
+                    return interaction.editReply({
+                        content: '❌ The selected mission data could not be found.',
+                    });
+                }
+
                 if (commission.completed) {
-                    return interaction.reply({
+                    return interaction.editReply({ // Usar editReply
                         content: '✅ That mission is already completed.',
-                        ephemeral: true,
                     });
                 }
 
-                const data = commissionsList.find(x => x.id === commission.id);
+                // Lógica para verificar si ya hay una comisión aceptada y no completada
+                if (profile.acceptedCommission) {
+                    const acceptedCommObject = profile.dailyCommissions.find(c => c.id === profile.acceptedCommission);
+                    if (acceptedCommObject && !acceptedCommObject.completed) {
+                        return interaction.editReply({
+                            content: `❌ Ya tienes una misión aceptada: **${data.title}**. ¡Completa esa primero!`,
+                        });
+                    }
+                }
 
                 // ───── 🎯 HANDLE TYPE: SIMPLE (auto-completed) ─────
                 if (data.type === 'simple') {
-                    commission.completed = true;
-                    profile.balance += data.reward?.mora || 0;
-                    profile.fragments = (profile.fragments || 0) + (data.reward?.intelFragments || 0);
-                    profile.reputation = (profile.reputation || 0) + (data.reward?.reputation || 0);
+                    commission.completed = true; // Marca como completada
+                    profile.balance = Math.max(0, profile.balance + (data.reward?.mora || 0)); // Asegura que no sea negativo
+                    profile.intelFragments = Math.max(0, (profile.intelFragments || 0) + (data.reward?.intelFragments || 0));
+                    profile.reputation = Math.max(0, (profile.reputation || 0) + (data.reward?.reputation || 0));
+                    profile.acceptedCommission = null; // No hay misión "activa" si es simple
                     await profile.save();
 
                     const embed = new EmbedBuilder()
                         .setTitle(`🎯 Completed: ${data.title}`)
                         .setDescription(`${data.outcome}`)
+                        .addFields(
+                            { name: 'Rewards', value: `💰 ${data.reward?.mora || 0} Mora, 🧩 ${data.reward?.intelFragments || 0} Intel Fragments, ⭐ ${data.reward?.reputation || 0} Reputation` }
+                        )
                         .setColor(0x22c55e)
                         .setTimestamp();
 
-                    return interaction.reply({ embeds: [embed], ephemeral: true });
+                    return interaction.editReply({ embeds: [embed] }); // Usar editReply
                 }
 
                 // ───── 🔘 HANDLE TYPE: BUTTON ─────
-                if (data.type === 'buttonOutcome') {
+                else if (data.type === 'buttonOutcome') { // Usa else if para asegurar exclusividad
+                    // Marca la misión como "aceptada" en el perfil para seguimiento
+                    profile.acceptedCommission = commission.id;
+                    await profile.save();
+
                     const button = new ButtonBuilder()
-                        .setCustomId(`commission_button_${num - 1}`)
+                        .setCustomId(`commission_button_${num - 1}`) // Pasamos el índice
                         .setLabel(data.buttonLabel || 'Start')
                         .setStyle(ButtonStyle.Primary);
 
@@ -122,17 +149,20 @@ module.exports = {
                         .setFooter({ text: 'Click the button to begin the task.' });
 
                     const row = new ActionRowBuilder().addComponents(button);
-                    return interaction.reply({
+                    return interaction.editReply({ // Usar editReply
                         embeds: [embed],
                         components: [row],
-                        ephemeral: true,
                     });
                 }
 
                 // ───── 🧠 HANDLE TYPE: MULTIPLE CHOICE ─────
-                if (data.type === 'multipleChoice') {
+                else if (data.type === 'multipleChoice') { // Usa else if
+                    // Marca la misión como "aceptada" en el perfil para seguimiento
+                    profile.acceptedCommission = commission.id;
+                    await profile.save();
+
                     const menu = new StringSelectMenuBuilder()
-                        .setCustomId(`commission_select_${num - 1}`)
+                        .setCustomId(`commission_select_${num - 1}`) // Pasamos el índice
                         .setPlaceholder('Choose your decision')
                         .addOptions(data.options.map(opt => ({
                             label: opt.label,
@@ -146,43 +176,50 @@ module.exports = {
                         .setFooter({ text: 'Make your choice wisely.' });
 
                     const row = new ActionRowBuilder().addComponents(menu);
-                    return interaction.reply({
+                    return interaction.editReply({ // Usar editReply
                         embeds: [embed],
                         components: [row],
-                        ephemeral: true,
                     });
                 }
 
-                return interaction.reply({
+                return interaction.editReply({ // Usar editReply
                     content: '⚠ This type of commission is not yet supported.',
-                    ephemeral: true,
                 });
             }
             // Lógica para el subcomando 'skip'
             else if (subCommandName === 'skip') {
-                const userId = interaction.user.id;
-                const profile = await getOrCreateProfile(userId);
+                // Primero, asegúrate de resetear si es un nuevo día para que skippedCommission se resetee
+                // OJO: Si resetCommissionsIfNewDay asigna nuevas comisiones, esto podría ser problemático.
+                // Idealmente, resetCommissionsIfNewDay se llama en un evento diario (cron job)
+                // para todos los usuarios, no aquí en cada comando 'skip'.
+                // Por ahora, lo dejo para que lo tengas en cuenta, pero si te da problemas, quítalo de aquí.
+                // const wasReset = await resetCommissionsIfNewDay(userId);
+                // if (wasReset) {
+                //     return interaction.editReply({ content: 'Your daily commissions have been reset for a new day! Try getting new ones with /commissions.', ephemeral: true });
+                // }
 
-                if (profile.skipped_today) {
-                    return interaction.reply({ content: '⚠ You have already skipped a mission today. Try again tomorrow.', ephemeral: true });
+                if (profile.skippedCommission) { // CAMBIO: Usar profile.skippedCommission
+                    return interaction.editReply({ content: '⚠ You have already skipped a mission today. Try again tomorrow.' });
                 }
 
-                const remaining = profile.commissions?.filter(c => !c.completed);
+                // CAMBIO: Usar profile.dailyCommissions
+                const remaining = profile.dailyCommissions?.filter(c => !c.completed);
                 if (!remaining || remaining.length === 0) {
-                    return interaction.reply({ content: '🎉 You\'ve completed all your missions today.', ephemeral: true });
+                    return interaction.editReply({ content: '🎉 You\'ve completed all your missions today.' });
                 }
 
-                const skipped = remaining[0];
-                profile.commissions = profile.commissions.filter(c => c !== skipped);
-                profile.skipped_today = true;
+                const skipped = remaining[0]; // La primera misión no completada
+                // Remover la misión de dailyCommissions
+                profile.dailyCommissions = profile.dailyCommissions.filter(c => c.id !== skipped.id); // Filtrar por ID
+                profile.skippedCommission = true; // Marcar que ha saltado una hoy
 
                 await profile.save();
 
-                await interaction.reply({ content: `🗑 You skipped a mission: ${skipped.id}`, ephemeral: true });
+                await interaction.editReply({ content: `🗑 You skipped a mission: ${skipped.id}` });
             }
             // Fallback en caso de que el subcomando no se encuentre (no debería ocurrir si está bien definido td)
             else {
-                await interaction.reply({ content: 'Subcommand of commission not recognized.', ephemeral: true });
+                await interaction.editReply({ content: 'Subcommand of commission not recognized.' });
             }
         } catch (error) {
             console.error(`Error executing commission subcommand ${subCommandName}:`, error);

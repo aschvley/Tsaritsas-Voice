@@ -7,19 +7,16 @@ const UserEconomy = require('../../../models/UserEconomy');
 const MORA_EMOJI = '<:mora:1390470693648470026>';
 
 module.exports = {
-    metadata: {
-        name: 'balance',
-        type: 'slash',
-        category: 'economy',
-    },
-    data: new SlashCommandBuilder()
+    // ¡¡¡CAMBIO CRÍTICO AQUÍ!!!
+    // El SlashCommandBuilder debe ser directamente la propiedad 'metadata'
+    metadata: new SlashCommandBuilder()
         .setName('balance')
         .setDescription('Shows your actual mora balance')
         .addUserOption(option =>
             option.setName('user')
                 .setDescription('The user whose balance you want to view')
                 .setRequired(false)),
-    
+
     async run(client, interaction, tools) {
         await interaction.deferReply({ ephemeral: false });
 
@@ -33,8 +30,7 @@ module.exports = {
 
         const balanceEmbed = new EmbedBuilder()
             .setColor('#FEE75C')
-            .setTitle('💰 Mora Balance 💰') // Puedes dejar este icono si te gusta, o cambiarlo
-            // --- CAMBIO AQUÍ: Usando el emoji personalizado ---
+            .setTitle('💰 Mora Balance 💰')
             .setDescription(`**${targetUser.username}** has **${userProfile.balance} ${MORA_EMOJI} mora**.`)
             .setThumbnail(targetUser.displayAvatarURL({ dynamic: true }))
             .setTimestamp()

@@ -34,9 +34,11 @@ async function updateReputation(userId, amount) {
 
 async function assignCommissions(userId, commissionIds) {
     const profile = await getOrCreateProfile(userId);
-    profile.dailyCommissions = commissionIds;
+    // ¡¡¡CAMBIO CRÍTICO AQUÍ!!!
+    // Mapea los IDs a objetos con 'completed: false'
+    profile.dailyCommissions = commissionIds.map(id => ({ id: id, completed: false }));
     profile.lastCommissionDate = new Date();
-    profile.acceptedCommission = null;
+    profile.acceptedCommission = null; // Reinicia la comisión aceptada
     profile.skippedCommission = false;
     await profile.save();
     return profile.dailyCommissions;
@@ -60,15 +62,16 @@ async function resetCommissionsIfNewDay(userId) {
     const today = new Date();
     const last = profile.lastCommissionDate;
 
+    // Compara solo la fecha (día, mes, año)
     if (!last || last.toDateString() !== today.toDateString()) {
-        profile.dailyCommissions = [];
+        profile.dailyCommissions = []; // Vacía las comisiones para el nuevo día
         profile.acceptedCommission = null;
         profile.skippedCommission = false;
         profile.lastCommissionDate = today;
         await profile.save();
-        return true;
+        return true; // Indica que se resetearon
     }
-    return false;
+    return false; // Indica que no se resetearon
 }
 
 function formatTime(ms) {
@@ -79,16 +82,16 @@ function formatTime(ms) {
 
     const parts = [];
     if (days > 0) {
-      parts.push(`${days}d`);
+        parts.push(`${days}d`);
     }
     if (hours > 0) {
-      parts.push(`${hours}h`);
+        parts.push(`${hours}h`);
     }
     if (minutes > 0) {
-      parts.push(`${minutes}m`);
+        parts.push(`${minutes}m`);
     }
     if (seconds > 0) {
-      parts.push(`${seconds}s`);
+        parts.push(`${seconds}s`);
     }
 
     return parts.length > 0 ? parts.join(' ') : '0s';
