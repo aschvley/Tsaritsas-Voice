@@ -359,10 +359,22 @@ client.on("interactionCreate", async int => {
 
 // --- Commission Buttons Handling ---
 if (int.isButton() && int.customId.startsWith('commission_')) {
-    const buttonHandler = client.buttons.get(int.customId.split('_')[0]); // Corregido el split para customId
-    if (buttonHandler) {
+    // Aquí ajustamos la lógica para los botones de comisión.
+    // Los nombres de los handlers en client.buttons deben coincidir con estos.
+    let commissionButtonHandlerName;
+    if (int.customId.startsWith('commission_button_outcome')) {
+        commissionButtonHandlerName = 'commission_button_outcome';
+    } else if (int.customId.startsWith('commission_multiple_choice')) {
+        commissionButtonHandlerName = 'commission_multiple_choice';
+    } else {
+        console.warn(`WARN: Unrecognized commission button CustomId: ${int.customId}`);
+        return await int.reply({ content: '❌ Unrecognized commission button type.', ephemeral: true });
+    }
+
+    const buttonHandler = client.buttons.get(commissionButtonHandlerName);
+    if (buttonHandler && buttonHandler.run) {
         try {
-            await buttonHandler.run(client, int, client.globalTools);
+            await buttonHandler.run(int); // Se pasa solo la interacción, como esperan tus handlers
         } catch (error) {
             console.error(`Error executing commission button ${int.customId}:`, error);
             await int.reply({ content: '❌ Error processing your commission button.', ephemeral: true });
@@ -373,10 +385,26 @@ if (int.isButton() && int.customId.startsWith('commission_')) {
 // --- End COMMISSIONS Handling
 
     // general commands and buttons
-    let foundCommand = client.commands.get(int.isButton() ? `button:${int.customId.split("~")[0]}` : int.commandName);
-    if (!foundCommand) return;
-    else if (foundCommand.metadata.slashEquivalent) {
+    let foundCommand; // Cambiamos de `let foundCommand = ...` directo a definir y luego asignar
+    if (int.isChatInputCommand()) { // Si es un comando slash (ej. /give, /commission)
+        foundCommand = client.commands.get(int.commandName);
+    } else if (int.isButton()) { // Si es un botón que no fue manejado por los bloques específicos de arriba
+        foundCommand = client.commands.get(`button:${int.customId.split("~")[0]}`);
+    }
+    // Si no es un comando slash ni un botón capturado, `foundCommand` será `undefined`
+    if (!foundCommand) {
+        // Si no se encuentra un comando/botón válido, simplemente salimos.
+        return; 
+    }
+
+    // else if (foundCommand.metadata.slashEquivalent) {  <--- Este if es el que cambia de lugar
+    // Llevamos la lógica de `slashEquivalent` aquí para que se aplique después de encontrar el comando inicial
+    if (foundCommand.metadata?.slashEquivalent) { 
         foundCommand = client.commands.get(foundCommand.metadata.slashEquivalent);
+        if (!foundCommand) {
+            console.warn(`Slash equivalent command "${foundCommand.metadata.slashEquivalent}" not found.`);
+            return int.reply({ content: '❌ Related slash command not found or loaded correctly.', ephemeral: true });
+        }
     }
 
     // dev perm check

@@ -1,77 +1,61 @@
 // Tsaritsa's-Voice/commands/slash/economy/give.js
 
-const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
-const UserEconomy = require('../../../models/UserEconomy'); // Ruta ajustada
-
-const MORA_EMOJI = '<:mora:1390470693648470026>'; // Tu emoji personalizado
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const UserEconomy = require('../../../models/UserEconomy');
+const MORA_EMOJI = '<:mora:1390470693648470026>';
 
 module.exports = {
-    // Elimina el objeto metadata extra si solo tiene name, type, category
-    // metadata: {
-    //     name: 'give',
-    //     type: 'slash',
-    //     category: 'economy',
-    // },
-    // **¡AQUÍ ESTÁ EL CAMBIO! 'data' debe ser 'metadata' para que tu cargador de comandos lo lea.**
-    metadata: new SlashCommandBuilder() // <-- CAMBIADO DE 'data' A 'metadata'
+    metadata: new SlashCommandBuilder()
         .setName('give')
-        .setDescription('Give mora to other user')
+        .setDescription('Give mora to another user.')
         .addUserOption(option =>
-            option.setName('usuario')
-                .setDescription('User you want to give mora to')
+            option.setName('user')
+                .setDescription('The user to give mora to.')
                 .setRequired(true))
         .addIntegerOption(option =>
-            option.setName('cantidad')
-                .setDescription('Quantity of mora to give')
+            option.setName('amount')
+                .setDescription('The amount of mora to give.')
                 .setRequired(true)
-                .setMinValue(1)) // Asegura que la cantidad sea al menos 1
-        // Puedes restringir este comando solo a roles específicos o permisos, por ejemplo:
-        // .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
-        ,
+                .setMinValue(1)),
     
     async run(client, interaction, tools) {
         await interaction.deferReply({ ephemeral: false });
 
-        const targetUser = interaction.options.getUser('usuario');
-        const amount = interaction.options.getInteger('cantidad');
+        const targetUser = interaction.options.getUser('user');
+        const amount = interaction.options.getInteger('amount');
+        const senderId = interaction.user.id;
 
-            // AÑADE ESTE LOG PARA DEPURAR
-    console.log(`Debug give: targetUser ->`, targetUser);
-    console.log(`Debug give: amount ->`, amount);
-
-    if (!targetUser) { // Añade este chequeo explícito
-        const errorEmbed = new EmbedBuilder()
-            .setColor('Red')
-            .setDescription(`❌ The specified user could not be found.`)
-            .setTimestamp()
-            .setFooter({ text: 'Tsaritsa\'s Voice Economy System', iconURL: client.user.displayAvatarURL() });
-        return await interaction.editReply({ embeds: [errorEmbed] });
-    }
-
-        // Evitar que un usuario se dé mora a sí mismo si no lo deseas
-        if (targetUser.id === interaction.user.id) {
-            const selfGiveEmbed = new EmbedBuilder()
-                .setColor('Red')
-                .setDescription(`❌ You can't give mora to yourself!`)
-                .setTimestamp()
-                .setFooter({ text: 'Tsaritsa\'s Voice Economy System', iconURL: client.user.displayAvatarURL() });
-            return await interaction.editReply({ embeds: [selfGiveEmbed] });
+        if (targetUser.id === senderId) {
+            return await interaction.editReply({ content: '❌ You cannot give mora to yourself!', ephemeral: true });
         }
 
-        // Obtener el perfil del usuario que recibe
+        if (targetUser.bot) {
+            return await interaction.editReply({ content: '❌ You cannot give mora to a bot!', ephemeral: true });
+        }
+
+        let senderProfile = await UserEconomy.findOne({ userId: senderId });
+        if (!senderProfile || senderProfile.balance < amount) {
+            return await interaction.editReply({ content: `❌ You do not have enough mora for this transaction! Your current balance is: **${senderProfile ? senderProfile.balance : 0} ${MORA_EMOJI}**.`, ephemeral: true });
+        }
+
+        // Deduct from sender
+        senderProfile.balance -= amount;
+        await senderProfile.save();
+
+        // Add to recipient
         let targetProfile = await UserEconomy.findOne({ userId: targetUser.id });
         if (!targetProfile) {
-            targetProfile = await UserEconomy.create({ userId: targetUser.id });
+            targetProfile = new UserEconomy({ userId: targetUser.id });
         }
-
-        // Actualizar el balance del usuario objetivo
         targetProfile.balance += amount;
         await targetProfile.save();
 
         const giveEmbed = new EmbedBuilder()
             .setColor('Green')
-            .setTitle('✨ Mora given! ✨')
-            .setDescription(`**${interaction.user.username}** has given **${amount} ${MORA_EMOJI} mora** to **${targetUser.username}**.\n${targetUser.username}'s new balance: **${targetProfile.balance} ${MORA_EMOJI} mora**.`)
+            .setTitle('💸 Transaction Successful! 💸')
+            .setDescription(`**${interaction.user.username}** has given **${amount} ${MORA_EMOJI}** to **${targetUser.username}**.\n\n` +
+                            `Your new balance: **${senderProfile.balance} ${MORA_EMOJI}**\n` +
+                            `**${targetUser.username}**'s new balance: **${targetProfile.balance} ${MORA_EMOJI}**`)
             .setTimestamp()
             .setFooter({ text: 'Tsaritsa\'s Voice Economy System', iconURL: client.user.displayAvatarURL() });
 
