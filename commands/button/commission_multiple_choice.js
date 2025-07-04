@@ -1,7 +1,7 @@
 // Tsaritsa's-Voice/commands/buttons/commission_multiple_choice.js
 
 const commissionsList = require('../../data/commissionsList.js');
-const { getOrCreateProfile } = require('../../../utils/economyUtils');
+const { getOrCreateProfile } = require('../../utils/economyUtils');
 const { EmbedBuilder } = require('discord.js');
 
 module.exports = {
