@@ -16,7 +16,7 @@ module.exports = {
     },
     data: new SlashCommandBuilder()
         .setName('daily')
-        .setDescription('Reclama tu mora diaria.'),
+        .setDescription('Claim your daily mora.'),
     
     async run(client, interaction, tools) {
         await interaction.deferReply({ ephemeral: false });
@@ -38,10 +38,10 @@ module.exports = {
 
             const cooldownEmbed = new EmbedBuilder()
                 .setColor('Red')
-                .setTitle('⏳ ¡Aún no puedes reclamar tu mora diaria! ⏳')
-                .setDescription(`Por favor, espera ${hours}h ${minutes}m ${seconds}s para reclamar tu próxima mora diaria.`)
+                .setTitle('⏳ You can\'t claim your daily mora yet! ⏳')
+                .setDescription(`Please wait ${hours}h ${minutes}m ${seconds}s to claim your next daily mora.`)
                 .setTimestamp()
-                .setFooter({ text: 'Sistema de Economía de Tsaritsa\'s Voice', iconURL: client.user.displayAvatarURL() });
+                .setFooter({ text: 'Tsaritsa\'s Voice Economy System', iconURL: client.user.displayAvatarURL() });
 
             return await interaction.editReply({ embeds: [cooldownEmbed] });
         } else {
@@ -51,11 +51,11 @@ module.exports = {
 
             const successEmbed = new EmbedBuilder()
                 .setColor('Green')
-                .setTitle('🎉 ¡Mora Diaria Reclamada! 🎉')
+                .setTitle('🎉 Daily Mora claimed! 🎉')
                 // --- CAMBIO AQUÍ: Usando el emoji personalizado ---
-                .setDescription(`Has reclamado **${DAILY_AMOUNT} ${MORA_EMOJI} mora** de tu recompensa diaria.\nTu nuevo balance es: **${userProfile.balance} ${MORA_EMOJI} mora**.`)
+                .setDescription(`You have claimed **${DAILY_AMOUNT} ${MORA_EMOJI} mora** from your daily reward.\nYour new balance is: **${userProfile.balance} ${MORA_EMOJI} mora**.`)
                 .setTimestamp()
-                .setFooter({ text: 'Sistema de Economía de Tsaritsa\'s Voice', iconURL: client.user.displayAvatarURL() });
+                .setFooter({ text: 'Tsaritsa\'s Voice Economy System', iconURL: client.user.displayAvatarURL() });
 
             return await interaction.editReply({ embeds: [successEmbed] });
         }

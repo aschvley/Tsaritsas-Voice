@@ -13,14 +13,14 @@ module.exports = {
     },
     data: new SlashCommandBuilder()
         .setName('give')
-        .setDescription('Da mora a otro usuario.')
+        .setDescription('Give mora to other user')
         .addUserOption(option =>
             option.setName('usuario')
-                .setDescription('El usuario al que quieres dar mora')
+                .setDescription('User you want to give mora to')
                 .setRequired(true))
         .addIntegerOption(option =>
             option.setName('cantidad')
-                .setDescription('La cantidad de mora a dar')
+                .setDescription('Quantity of mora to give')
                 .setRequired(true)
                 .setMinValue(1)) // Asegura que la cantidad sea al menos 1
         // Puedes restringir este comando solo a roles específicos o permisos, por ejemplo:
@@ -37,9 +37,9 @@ module.exports = {
         if (targetUser.id === interaction.user.id) {
             const selfGiveEmbed = new EmbedBuilder()
                 .setColor('Red')
-                .setDescription(`❌ ¡No puedes darte mora a ti mismo!`)
+                .setDescription(`❌ You can't give mora to yourself!`)
                 .setTimestamp()
-                .setFooter({ text: 'Sistema de Economía de Tsaritsa\'s Voice', iconURL: client.user.displayAvatarURL() });
+                .setFooter({ text: 'Tsaritsa\'s Voice Economy System', iconURL: client.user.displayAvatarURL() });
             return await interaction.editReply({ embeds: [selfGiveEmbed] });
         }
 
@@ -55,10 +55,10 @@ module.exports = {
 
         const giveEmbed = new EmbedBuilder()
             .setColor('Green')
-            .setTitle('✨ ¡Mora Entregada! ✨')
-            .setDescription(`**${interaction.user.username}** ha dado **${amount} ${MORA_EMOJI} mora** a **${targetUser.username}**.\nNuevo balance de ${targetUser.username}: **${targetProfile.balance} ${MORA_EMOJI} mora**.`)
+            .setTitle('✨ Mora given! ✨')
+            .setDescription(`**${interaction.user.username}** has given **${amount} ${MORA_EMOJI} mora** to **${targetUser.username}**.\n${targetUser.username}'s new balance: **${targetProfile.balance} ${MORA_EMOJI} mora**.`)
             .setTimestamp()
-            .setFooter({ text: 'Sistema de Economía de Tsaritsa\'s Voice', iconURL: client.user.displayAvatarURL() });
+            .setFooter({ text: 'Tsaritsa\'s Voice Economy System', iconURL: client.user.displayAvatarURL() });
 
         await interaction.editReply({ embeds: [giveEmbed] });
     },

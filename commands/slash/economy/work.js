@@ -10,16 +10,16 @@ const WORK_COOLDOWN = 1 * 60 * 60 * 1000;
 const MORA_EMOJI = '<:mora:1390470693648470026>';
 
 const WORK_MESSAGES = [
-    "Ayudaste a un comerciante en Port Ormos a cargar mercancías y ganaste",
-    "Trabajaste limpiando las calles de Sumeru City y recibiste",
-    "Ayudaste a la Academia a organizar pergaminos y te pagaron",
-    "Realizaste una tarea extraña para un ciudadano de Fontaine y conseguiste",
-    "Mineraste en Liyue y encontraste algunas vetas de mora, ganando",
-    "Entrenaste con los Caballeros de Favonius y te dieron",
-    "Ayudaste a Paimon a encontrar una especialidad local y te recompensó con",
-    "Realizaste una entrega urgente para la Guild de Aventureros y ganaste",
-    "Cocinaste un banquete para los Fatui y te pagaron",
-    "Recogiste cristal de topocristal para un alquimista y obtuviste"
+    "You helped a merchant in Port Ormos load goods and earned",
+    "You worked cleaning the streets of Sumeru City and received",
+    "You helped the Akademiya organize scrolls and were paid",
+    "You performed an odd job for a Fontaine citizen and got",
+    "You mined in Liyue and found some mora veins, earning",
+    "You trained with the Knights of Favonius and were given",
+    "You helped Paimon find a local specialty and were rewarded with",
+    "You made an urgent delivery for the Adventurers' Guild and earned",
+    "You cooked a banquet for the Fatui and were paid",
+    "You collected Topaz Crystal for an alchemist and obtained"
 ];
 
 module.exports = {
@@ -30,7 +30,7 @@ module.exports = {
     },
     data: new SlashCommandBuilder()
         .setName('work')
-        .setDescription('Trabaja y gana algo de mora.'),
+        .setDescription('Work and get some mora.'),
     
     async run(client, interaction, tools) {
         await interaction.deferReply({ ephemeral: false });
@@ -52,10 +52,10 @@ module.exports = {
 
             const cooldownEmbed = new EmbedBuilder()
                 .setColor('Red')
-                .setTitle('⏳ ¡Aún no puedes trabajar! ⏳')
-                .setDescription(`Necesitas descansar un poco. Vuelve en ${hours}h ${minutes}m ${seconds}s para tu próximo trabajo.`)
+                .setTitle('⏳ You can\'t work yet! ⏳')
+                .setDescription(`You need to rest a bit. Come back in ${hours}h ${minutes}m ${seconds}s for your next work.`)
                 .setTimestamp()
-                .setFooter({ text: 'Sistema de Economía de Tsaritsa\'s Voice', iconURL: client.user.displayAvatarURL() });
+                .setFooter({ text: 'Tsaritsa\'s Voice Economy System', iconURL: client.user.displayAvatarURL() });
 
             return await interaction.editReply({ embeds: [cooldownEmbed] });
         } else {
@@ -68,11 +68,11 @@ module.exports = {
 
             const successEmbed = new EmbedBuilder()
                 .setColor('Green')
-                .setTitle('💼 ¡Trabajo Completo! 💼')
-                // --- CAMBIO AQUÍ: Usando el emoji personalizado ---
-                .setDescription(`${randomMessage} **${earnedAmount} ${MORA_EMOJI} mora**.\nTu nuevo balance es: **${userProfile.balance} ${MORA_EMOJI} mora**.`)
+                .setTitle('💼 Work Complete! 💼')
+                // --- CHANGE HERE: Using the custom emoji ---
+                .setDescription(`${randomMessage} **${earnedAmount} ${MORA_EMOJI} mora**.\nYour new balance is: **${userProfile.balance} ${MORA_EMOJI} mora**.`)
                 .setTimestamp()
-                .setFooter({ text: 'Sistema de Economía de Tsaritsa\'s Voice', iconURL: client.user.displayAvatarURL() });
+                .setFooter({ text: 'Tsaritsa\'s Voice Economy System', iconURL: client.user.displayAvatarURL() });
 
             return await interaction.editReply({ embeds: [successEmbed] });
         }

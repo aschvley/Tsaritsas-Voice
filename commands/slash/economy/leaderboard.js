@@ -13,7 +13,7 @@ module.exports = {
     },
     data: new SlashCommandBuilder()
         .setName('leaderboard')
-        .setDescription('Muestra los usuarios con más mora.'),
+        .setDescription('Shows the users with the most mora.'),
     
     async run(client, interaction, tools) {
         await interaction.deferReply({ ephemeral: false });
@@ -27,9 +27,9 @@ module.exports = {
         if (topUsers.length === 0) {
             const noDataEmbed = new EmbedBuilder()
                 .setColor('Yellow')
-                .setDescription('Actualmente no hay datos de economía para mostrar en el leaderboard.')
+                .setDescription('Currently there is no economy data to display in the leaderboard.')
                 .setTimestamp()
-                .setFooter({ text: 'Sistema de Economía de Tsaritsa\'s Voice', iconURL: client.user.displayAvatarURL() });
+                .setFooter({ text: 'Tsaritsa\'s Voice Economy System', iconURL: client.user.displayAvatarURL() });
             return await interaction.editReply({ embeds: [noDataEmbed] });
         }
 
@@ -37,17 +37,17 @@ module.exports = {
         for (let i = 0; i < topUsers.length; i++) {
             const userProfile = topUsers[i];
             const user = await client.users.fetch(userProfile.userId).catch(() => null); // Obtener el objeto de usuario de Discord
-            const username = user ? user.username : 'Usuario Desconocido';
+            const username = user ? user.username : 'Unknown User';
 
             description += `**${i + 1}.** ${username}: **${userProfile.balance} ${MORA_EMOJI}**\n`;
         }
 
         const leaderboardEmbed = new EmbedBuilder()
             .setColor('#0099ff') // Un color azul para el leaderboard
-            .setTitle('🏆 Top 10 Ricos en Mora 🏆')
+            .setTitle('🏆 Top 10 Rich 🏆')
             .setDescription(description)
             .setTimestamp()
-            .setFooter({ text: 'Sistema de Economía de Tsaritsa\'s Voice', iconURL: client.user.displayAvatarURL() });
+            .setFooter({ text: 'Tsaritsa\'s Voice Economy System', iconURL: client.user.displayAvatarURL() });
 
         await interaction.editReply({ embeds: [leaderboardEmbed] });
     },

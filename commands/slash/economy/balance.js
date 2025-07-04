@@ -14,16 +14,16 @@ module.exports = {
     },
     data: new SlashCommandBuilder()
         .setName('balance')
-        .setDescription('Muestra tu balance de mora actual.')
+        .setDescription('Shows your actual mora balance')
         .addUserOption(option =>
-            option.setName('usuario')
-                .setDescription('El usuario cuyo balance deseas ver')
+            option.setName('user')
+                .setDescription('The user whose balance you want to view')
                 .setRequired(false)),
     
     async run(client, interaction, tools) {
         await interaction.deferReply({ ephemeral: false });
 
-        const targetUser = interaction.options.getUser('usuario') || interaction.user;
+        const targetUser = interaction.options.getUser('user') || interaction.user;
 
         let userProfile = await UserEconomy.findOne({ userId: targetUser.id });
 
@@ -33,12 +33,12 @@ module.exports = {
 
         const balanceEmbed = new EmbedBuilder()
             .setColor('#FEE75C')
-            .setTitle('💰 Balance de Mora 💰') // Puedes dejar este icono si te gusta, o cambiarlo
+            .setTitle('💰 Mora Balance 💰') // Puedes dejar este icono si te gusta, o cambiarlo
             // --- CAMBIO AQUÍ: Usando el emoji personalizado ---
-            .setDescription(`**${targetUser.username}** tiene **${userProfile.balance} ${MORA_EMOJI} mora**.`)
+            .setDescription(`**${targetUser.username}** has **${userProfile.balance} ${MORA_EMOJI} mora**.`)
             .setThumbnail(targetUser.displayAvatarURL({ dynamic: true }))
             .setTimestamp()
-            .setFooter({ text: 'Sistema de Economía de Tsaritsa\'s Voice', iconURL: client.user.displayAvatarURL() });
+            .setFooter({ text: 'Tsaritsa\'s Voice Economy System', iconURL: client.user.displayAvatarURL() });
 
         await interaction.editReply({ embeds: [balanceEmbed] });
     },
