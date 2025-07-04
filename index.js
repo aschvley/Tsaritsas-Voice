@@ -49,7 +49,7 @@ client.db = new Model("servers", require("./database_schema.js").schema);
 // Función para conectar a MongoDB Atlas con Mongoose
 async function connectMongooseDB() {
     try {
-        await mongoose.connect(process.env.MONGODB_URI);
+        await mongoose.connect(process.env.MONGO_DB_URI);
         console.log('✅ Conectado a MongoDB Atlas (Mongoose)!');
     } catch (error) {
         console.error('❌ Error al conectar a MongoDB Atlas (Mongoose):', error);
