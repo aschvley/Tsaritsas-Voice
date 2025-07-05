@@ -55,7 +55,7 @@ module.exports = [
     title: "[Capitano] Training Protocol",
     description: "You are tasked to evaluate recruits in a high-pressure simulation.",
     reward: { reputation: 1 },
-    type: "reactionChallenge", // OJO: Tu código aún no maneja 'reactionChallenge'
+    type: "reactionChallenge", //YA TENEMOS CODIGO PARA ESTO
     prompt: "A surprise attack hits the squad. What do you do?",
     reactions: [
       { emoji: "🛡️", label: "Protect them", outcome: "success" },

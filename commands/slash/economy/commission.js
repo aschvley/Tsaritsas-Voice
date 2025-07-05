@@ -1,9 +1,89 @@
 // commands/slash/economy/commission.js
 
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
+// Asegúrate de importar 'Events' para el Reaction Challenge
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, Events } = require('discord.js');
 const { getOrCreateProfile, ensureDailyCommissions, completeCommissionOutcome } = require('../../../utils/economyUtils');
 const UserEconomy = require('../../../models/UserEconomy');
 const commissionsList = require('../../../data/commissionsList');
+
+// ********** NUEVA FUNCIÓN PARA MANEJAR REACTION CHALLENGE **********
+async function handleReactionChallenge(client, interaction, userProfile, commissionDetails, commissionIndex) {
+    const filter = (reaction, user) => {
+        // Solo aceptar reacciones del usuario que inició el comando
+        // y solo si el emoji de la reacción está en la lista de emojis de la misión
+        const validEmojis = commissionDetails.reactions.map(r => r.emoji);
+        return user.id === interaction.user.id && validEmojis.includes(reaction.emoji.name);
+    };
+
+    // El mensaje de la interacción original ya fue deferido y respondido en el comando 'claim'.
+    // Ahora, vamos a enviar el mensaje del desafío y agregar las reacciones.
+    const challengeMessage = await interaction.followUp({ 
+        content: `**${interaction.user.username}**, for your mission **[[${commissionDetails.title}]]**: ${commissionDetails.prompt}\n(React below with your choice)`, 
+        ephemeral: false // Este mensaje debe ser público para que las reacciones funcionen correctamente
+    });
+
+    // Añadir las reacciones al mensaje
+    for (const reaction of commissionDetails.reactions) {
+        await challengeMessage.react(reaction.emoji);
+    }
+
+    // Recolector de reacciones
+    challengeMessage.awaitReactions({ filter, max: 1, time: 60_000, errors: ['time'] }) // Esperar 60 segundos (1 minuto)
+        .then(async collected => {
+            const reaction = collected.first();
+            const chosenOutcome = commissionDetails.reactions.find(r => r.emoji === reaction.emoji.name);
+
+            if (!chosenOutcome) {
+                // Esto no debería ocurrir si el filtro funciona bien
+                console.error("Reaction collected but no matching outcome found.");
+                return interaction.followUp({ content: 'An unknown error occurred with your reaction. Please try again later.', ephemeral: true });
+            }
+
+            const outcomeData = commissionDetails.outcomes[chosenOutcome.outcome];
+            const rewards = outcomeData.rewards || {};
+            const message = `${interaction.user.username} chose ${chosenOutcome.label}. ${outcomeData.message || ''}`;
+
+            const resultEmbed = new EmbedBuilder()
+                .setTitle(`✅ Completed: [[${commissionDetails.title}]]`)
+                .setDescription(message)
+                .setColor('#00FF00');
+
+            let rewardsText = '';
+            for (const type in rewards) {
+                const amount = rewards[type];
+                if (amount > 0) {
+                    switch (type) {
+                        case 'mora': rewardsText += `💰 ${amount} Mora, `; break;
+                        case 'intelFragments': rewardsText += `🧩 ${amount} Intel Fragments, `; break;
+                        case 'reputation': rewardsText += `⭐ ${amount} Reputation, `; break;
+                    }
+                }
+            }
+            if (rewardsText) {
+                resultEmbed.addFields({ name: 'Rewards', value: rewardsText.slice(0, -2) });
+            }
+
+            await completeCommissionOutcome(userProfile, commissionIndex, rewards);
+            userProfile.acceptedCommission = null; // Limpiar la misión activa
+            await userProfile.save();
+
+            // Editar el mensaje del desafío para mostrar el resultado y limpiar reacciones
+            await challengeMessage.edit({ embeds: [resultEmbed], content: `${interaction.user.username}'s challenge completed!`, components: [] });
+            await challengeMessage.reactions.removeAll().catch(error => console.error('Failed to clear reactions:', error));
+
+        })
+        .catch(async collected => {
+            console.log('No reaction collected or time expired for reaction challenge.');
+            // Si el tiempo expira o no se recolecta ninguna reacción
+            userProfile.acceptedCommission = null; // Limpiar la misión para que pueda intentarlo de nuevo
+            await userProfile.save();
+            await interaction.followUp({ content: 'You took too long to react, mission failed. Your active commission has been cleared, try again!', ephemeral: false });
+            // Opcional: Eliminar las reacciones del mensaje si el tiempo expira
+            await challengeMessage.reactions.removeAll().catch(error => console.error('Failed to clear reactions:', error));
+        });
+}
+// *******************************************************************
+
 
 module.exports = {
     metadata: new SlashCommandBuilder()
@@ -36,7 +116,7 @@ module.exports = {
 
         const userProfile = await getOrCreateProfile(interaction.user.id);
         await ensureDailyCommissions(userProfile.userId);
-        await userProfile.save(); // Guardar cualquier cambio de ensureDailyCommissions
+        await userProfile.save(); 
 
         const command = interaction.options.getSubcommand();
 
@@ -49,7 +129,7 @@ module.exports = {
             const activeCommission = freshUserProfile.acceptedCommission;
             const embed = new EmbedBuilder()
                 .setTitle('📜 Your Commission Status')
-                .setColor('#B30000'); // Color Fatui
+                .setColor('#B30000'); 
 
             if (!freshUserProfile.dailyCommissions || freshUserProfile.dailyCommissions.length === 0) {
                 embed.setDescription('You have no daily commissions assigned. They should reset at the start of a new day.');
@@ -58,7 +138,6 @@ module.exports = {
                 freshUserProfile.dailyCommissions.forEach((commissionData, index) => {
                     const commissionDetails = commissionsList.find(c => c.id === commissionData.id);
                     const statusEmoji = commissionData.completed ? '✅ Completed' : '🕒 Pending';
-                    // Modificación: Verifica si la acceptedCommission no es null y si el ID coincide
                     const activeIndicator = activeCommission && activeCommission.id === commissionData.id ? '(Active)' : '';
 
                     if (commissionDetails) {
@@ -101,34 +180,26 @@ module.exports = {
                 return interaction.editReply({ content: 'The selected commission data could not be found. It might be corrupted or removed.', ephemeral: true });
             }
             
-            // ****** CAMBIO CLAVE AQUÍ: LÓGICA PARA RECLAMAR / RE-RECLAMAR *******
             if (userProfile.acceptedCommission) {
-                // Si el usuario ya tiene una misión activa
                 if (userProfile.acceptedCommission.id === commissionToClaimData.id) {
-                    // Si intenta reclamar la MISMA misión activa, le volvemos a mostrar la interfaz interactiva.
-                    // Esto es para que pueda intentar de nuevo si falló la interacción previa.
-                    await interaction.editReply({ content: `You already have an active commission: **[[${commissionDetails.title}]]**. Showing it again.`, ephemeral: true }); // Mensaje efímero para indicar que ya está activa
+                    await interaction.editReply({ content: `You already have an active commission: **[[${commissionDetails.title}]]**. Showing it again.`, ephemeral: true });
                 } else {
-                    // Si tiene una misión activa DIFERENTE, no puede reclamar otra.
                     const activeMissionTitle = commissionsList.find(c => c.id === userProfile.acceptedCommission.id)?.title || 'Unknown Mission';
                     return interaction.editReply({ content: `You already have an active commission: **[[${activeMissionTitle}]]**. Complete or skip that one first.`, ephemeral: true });
                 }
             } else {
-                // Si no hay misión activa, establecer esta como la aceptada.
                 userProfile.acceptedCommission = {
                     id: commissionDetails.id,
                     type: commissionDetails.type,
                     index: commissionIndex,
                 };
-                await userProfile.save(); // Guarda el estado de misión aceptada
-                await interaction.editReply({ content: `You have accepted: **[[${commissionDetails.title}]]**`, ephemeral: true }); // Mensaje inicial de aceptación (efímero)
+                await userProfile.save();
+                await interaction.editReply({ content: `You have accepted: **[[${commissionDetails.title}]]**`, ephemeral: true });
             }
-            // *******************************************************************
 
             let replyMessage = `<@${interaction.user.id}> has accepted: **[[${commissionDetails.title}]]**\n`;
             const row = new ActionRowBuilder();
             let componentsToAdd = [];
-            let ephemeralClaim = false; // Los mensajes de claim ahora NO son efímeros por defecto.
 
             switch (commissionDetails.type) {
                 case 'simple':
@@ -155,11 +226,12 @@ module.exports = {
                         await completeCommissionOutcome(userProfile, commissionIndex, {});
                     }
 
-                    userProfile.acceptedCommission = null; // Se limpia aquí porque ya se completó.
+                    userProfile.acceptedCommission = null;
                     await userProfile.save();
 
-                    await interaction.editReply({ embeds: [simpleRewardEmbed] });
-                    return;
+                    // Importante: Usar followUp para la respuesta pública de la misión simple.
+                    await interaction.followUp({ embeds: [simpleRewardEmbed], ephemeral: false }); 
+                    return; // Retornar para que no intente enviar otro followUp
 
                 case 'buttonOutcome':
                     replyMessage += commissionDetails.description;
@@ -172,7 +244,7 @@ module.exports = {
                         );
                     });
                     componentsToAdd.push(row);
-                    ephemeralClaim = false; // Este es público, con botones
+                    await interaction.followUp({ content: replyMessage, components: componentsToAdd, ephemeral: false });
                     break;
 
                 case 'multipleChoice':
@@ -188,29 +260,19 @@ module.exports = {
                         );
                     row.addComponents(selectMenu);
                     componentsToAdd.push(row);
-                    ephemeralClaim = false; // Este es público, con selector
+                    await interaction.followUp({ content: replyMessage, components: componentsToAdd, ephemeral: false });
                     break;
 
                 case 'reactionChallenge':
-                    replyMessage += `\n**${commissionDetails.prompt}**\nReact with the appropriate emoji!`;
-                    ephemeralClaim = false; // Este es público, con reacciones
-                    break;
+                    // Llamar a la nueva función que maneja el desafío de reacción
+                    await handleReactionChallenge(client, interaction, userProfile, commissionDetails, commissionIndex);
+                    break; 
 
                 default:
-                    // Si el tipo de comisión no es compatible, debemos limpiar acceptedCommission
                     userProfile.acceptedCommission = null;
                     await userProfile.save();
                     return interaction.editReply({ content: `This type of commission (${commissionDetails.type}) is not yet supported and your active commission has been cleared.`, ephemeral: true });
             }
-
-            // CAMBIO: Si el tipo de misión no es 'simple', la respuesta con los componentes SÍ debe ser pública.
-            // La línea `await interaction.editReply({ content: `You have accepted: **[[${commissionDetails.title}]]**`, ephemeral: true });`
-            // ya se encarga del primer mensaje efímero cuando se acepta la misión por primera vez.
-            // Aquí, si es una misión interactiva, vamos a hacer un followUp si ya se ha respondido o editar si no.
-            // Para simplificar, haremos que el mensaje con los componentes SIEMPRE sea un followUp, y el ephemeral lo maneja la lógica de cada tipo.
-
-            // Para asegurar que la interacción con botones/selectores se muestre públicamente, incluso si fue re-reclamada
-            await interaction.followUp({ content: replyMessage, components: componentsToAdd, ephemeral: false });
 
         } else if (command === 'skip') {
             if (userProfile.skippedCommission) {
@@ -222,7 +284,6 @@ module.exports = {
                 return interaction.editReply({ content: 'You have no pending commissions to skip!', ephemeral: true });
             }
 
-            // Si hay una comisión activa, esta es la que debería skipearse primero.
             let commissionToSkipData;
             let indexToSkip = -1;
 
@@ -230,7 +291,6 @@ module.exports = {
                 commissionToSkipData = userProfile.dailyCommissions[userProfile.acceptedCommission.index];
                 indexToSkip = userProfile.acceptedCommission.index;
             } else {
-                // Si no hay activa o la activa ya está completada (error de estado), toma la primera pendiente.
                 commissionToSkipData = pendingCommissions[0];
                 indexToSkip = userProfile.dailyCommissions.findIndex(c => c.id === commissionToSkipData.id);
             }
@@ -241,7 +301,7 @@ module.exports = {
             
             userProfile.dailyCommissions[indexToSkip].completed = true;
             userProfile.skippedCommission = true;
-            userProfile.acceptedCommission = null; // Siempre se limpia la activa al skipear
+            userProfile.acceptedCommission = null;
             await userProfile.save();
 
             const skippedDetails = commissionsList.find(c => c.id === commissionToSkipData.id);
@@ -252,23 +312,14 @@ module.exports = {
     },
 
     async handleComponentInteraction(interaction) {
-        // Asumiendo que esta función siempre es invocada por una interacción con componentes (botones/select)
-        // y que el mensaje inicial de "claim" ya fue editado o respondido.
-        // Aquí siempre respondemos con followUp si la interacción es para un usuario diferente
-        // o editamos el mensaje original si es para el mismo usuario.
-        
-        // Deferir la interacción del componente (puede ser visible o no dependiendo del contexto)
-        await interaction.deferUpdate(); // Esto evita el "This interaction failed" si la respuesta tarda
+        await interaction.deferUpdate();
 
         const [commandPrefix, componentType, missionId, outcomeIndexStr] = interaction.customId.split('_');
 
         const userProfile = await getOrCreateProfile(interaction.user.id);
         const acceptedCommission = userProfile.acceptedCommission;
 
-        // Validar que la interacción corresponde a la misión activa del usuario
-        // Y que el usuario que interactúa es el mismo que la aceptó (opcional, pero buena práctica)
         if (!acceptedCommission || acceptedCommission.id !== missionId || userProfile.userId !== interaction.user.id) {
-            // Si la interacción no es para la misión activa de este usuario, respondemos efímeramente.
             return interaction.followUp({ content: 'This interaction is not for your current active commission or is outdated.', ephemeral: true });
         }
 
@@ -278,22 +329,19 @@ module.exports = {
         }
 
         let outcomeData;
-        let selectedValue; // Para multipleChoice
+        let selectedValue; 
 
         if (componentType === 'button') {
             const outcomeIdx = parseInt(outcomeIndexStr);
             outcomeData = commissionDetails.outcomes[outcomeIdx];
-        } else if (componentType === 'select') { // Para StringSelectMenu
-            selectedValue = interaction.values[0]; // El valor seleccionado del menú
+        } else if (componentType === 'select') {
+            selectedValue = interaction.values[0]; 
             const selectedOption = commissionDetails.options.find(opt => opt.value === selectedValue);
             if (selectedOption && commissionDetails.outcomes[selectedOption.outcome]) {
-                outcomeData = commissionDetails.outcomes[selectedOption.outcome]; // Obtener el objeto de outcome real
+                outcomeData = commissionDetails.outcomes[selectedOption.outcome]; 
             }
         } else if (componentType === 'modal') {
-             // Modales son un poco diferentes, la respuesta inicial se maneja en el listener del modal
-             // Aquí solo procesamos el resultado del modal si se invoca esta función desde ahí.
-             // Para simplificar, asumimos que completeCommissionOutcome se llama después de procesar el modal.
-            return; // No necesitamos más lógica aquí si el modal ya llamó a completeCommissionOutcome
+            return;
         }
 
         if (!outcomeData) {
@@ -324,12 +372,9 @@ module.exports = {
         }
 
         await completeCommissionOutcome(userProfile, acceptedCommission.index, rewards);
-        userProfile.acceptedCommission = null; // Se limpia la misión activa después de completarla
+        userProfile.acceptedCommission = null; 
         await userProfile.save();
 
-        // Editar el mensaje original para mostrar el resultado y eliminar los componentes.
-        // Si el mensaje original del "claim" fue efímero, `editReply` funciona con `ephemeral: true`.
-        // Si fue público, `editReply` lo edita públicamente.
         await interaction.message.edit({ embeds: [resultEmbed], components: [] });
     }
 };
