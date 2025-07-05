@@ -38,7 +38,7 @@ module.exports = {
         }
 
         const leaderboardEmbed = new EmbedBuilder()
-            .setColor('#0099ff') // Un color azul para el leaderboard
+            .setColor('#325a97') // Un color azul para el leaderboard
             .setTitle('🏆 Top 10 Richest People🏆') // <--- SUGERENCIA DE CAMBIO DE TÍTULO
             .setDescription(description)
             .setTimestamp()

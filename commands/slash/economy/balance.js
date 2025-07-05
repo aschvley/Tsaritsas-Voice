@@ -29,7 +29,7 @@ module.exports = {
         }
 
         const balanceEmbed = new EmbedBuilder()
-            .setColor('#FEE75C')
+            .setColor('#325a97')
             .setTitle('💰 Mora Balance 💰')
             .setDescription(`**${targetUser.username}** has **${userProfile.balance} ${MORA_EMOJI} mora**.`)
             .setThumbnail(targetUser.displayAvatarURL({ dynamic: true }))

@@ -64,9 +64,9 @@ client.db = new Model("servers", require("./database_schema.js").schema);
 async function connectMongooseDB() {
     try {
         await mongoose.connect(process.env.MONGO_DB_URI);
-        console.log('✅ Conectado a MongoDB Atlas (Mongoose)!');
+        console.log('✅ Connected to MongoDB Atlas (Mongoose)!'); // Cambiado a inglés
     } catch (error) {
-        console.error('❌ Error al conectar a MongoDB Atlas (Mongoose):', error);
+        console.error('❌ Error connecting to MongoDB Atlas (Mongoose):', error); // Cambiado a inglés
     }
 }
 
@@ -85,7 +85,7 @@ fs.readdirSync(dir).forEach(type => {
                     if (command.metadata instanceof SlashCommandBuilder) { // <-- ¡CAMBIO CLAVE! Si ya es un SlashCommandBuilder
                         client.commands.set(command.metadata.name, command); // Usa el nombre del SlashCommandBuilder
                         slashCommandsToRegister.push(command.metadata.toJSON()); // <-- ¡AÑADIDO Y CLAVE!
-                        console.log(`Comando /${slashSubDir}/${command.metadata.name} cargado y listo para registro.`);
+                        console.log(`Command /${slashSubDir}/${command.metadata.name} loaded and ready for registration.`); // Cambiado a inglés
                     } else if (command.metadata) { // Si tiene metadata pero no es un SlashCommandBuilder (es un objeto simple)
                         command.metadata.type = 'slash';
                         command.metadata.category = slashSubDir;
@@ -93,7 +93,7 @@ fs.readdirSync(dir).forEach(type => {
                         // No lo añadimos a slashCommandsToRegister aquí si es un objeto simple,
                         // porque los comandos slash de Discord API necesitan un formato específico de SlashCommandBuilder.
                         // Solo los que son instanceof SlashCommandBuilder irán al registro API.
-                        console.log(`Comando /${slashSubDir}/${command.metadata.name} (legacy metadata) cargado.`);
+                        console.log(`Command /${slashSubDir}/${command.metadata.name} (legacy metadata) loaded.`); // Cambiado a inglés
                     }
                 });
             } else if (slashSubDir.endsWith(".js")) {
@@ -102,11 +102,11 @@ fs.readdirSync(dir).forEach(type => {
                 if (command.metadata instanceof SlashCommandBuilder) { // <-- ¡CAMBIO CLAVE!
                     client.commands.set(command.metadata.name, command);
                     slashCommandsToRegister.push(command.metadata.toJSON()); // <-- ¡AÑADIDO Y CLAVE!
-                    console.log(`Comando /${command.metadata.name} cargado y listo para registro.`);
+                    console.log(`Command /${command.metadata.name} loaded and ready for registration.`); // Cambiado a inglés
                 } else if (command.metadata) { // Si tiene metadata pero no es un SlashCommandBuilder
                     command.metadata.type = 'slash';
                     client.commands.set(command.metadata.name, command);
-                    console.log(`Comando /${command.metadata.name} (legacy metadata) cargado.`);
+                    console.log(`Command /${command.metadata.name} (legacy metadata) loaded.`); // Cambiado a inglés
                 }
             }
         });
@@ -119,7 +119,7 @@ fs.readdirSync(dir).forEach(type => {
             if (!command.metadata) command.metadata = { name: file.split(".js")[0] };
             command.metadata.type = type;
             client.commands.set(command.metadata.name, command);
-            console.log(`Comando ${type}:${command.metadata.name} cargado.`);
+            console.log(`Command ${type}:${command.metadata.name} loaded.`); // Cambiado a inglés
         });
     }
 });
@@ -131,12 +131,12 @@ fs.readdirSync('./commands/button').filter(file => file.endsWith('.js')).forEach
         const button = require(`./commands/button/${file}`);
         if (button.metadata?.name) {
             client.buttons.set(button.metadata.name, button);
-            console.log(`Botón cargado: ${file} con nombre ${button.metadata.name}`);
+            console.log(`Button loaded: ${file} with name ${button.metadata.name}`); // Cambiado a inglés
         } else {
-            console.warn(`Advertencia: ${file} no tiene metadata.name.`);
+            console.warn(`Warning: ${file} has no metadata.name.`); // Cambiado a inglés
         }
     } catch (error) {
-        console.error(`Error al cargar el botón ${file}:`, error);
+        console.error(`Error loading button ${file}:`, error); // Cambiado a inglés
     }
 });
 
@@ -154,9 +154,9 @@ function loadAutoResponses() {
     try {
         const data = fs.readFileSync('./auto_responses.json', 'utf8');
         autoResponses = JSON.parse(data);
-        console.log('Respuestas automáticas cargadas.');
+        console.log('Auto-responses loaded.'); // Cambiado a inglés
     } catch (error) {
-        console.error('Error al cargar las respuestas automáticas:', error);
+        console.error('Error loading auto-responses:', error); // Cambiado a inglés
     }
 }
 
@@ -171,10 +171,10 @@ client.on("ready", async () => {
     // COMENTARIO: INICIO DEL NUEVO BLOQUE DE REGISTRO DE COMANDOS SLASH
     const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
     try {
-        console.log(`Comenzando a registrar ${slashCommandsToRegister.length} comandos slash (/).`);
+        console.log(`Starting to register ${slashCommandsToRegister.length} slash (/) commands.`); // Cambiado a inglés
 
         // **** AÑADE ESTAS LÍNEAS TEMPORALMENTE PARA DEPURAR ****
-        console.log("Contenido de slashCommandsToRegister:", JSON.stringify(slashCommandsToRegister, (key, value) => {
+        console.log("Contents of slashCommandsToRegister:", JSON.stringify(slashCommandsToRegister, (key, value) => {
             if (typeof value === 'bigint') {
                 return value.toString() + 'n'; // Convierte BigInt a string y añade 'n' para identificarlo
             }
@@ -190,20 +190,20 @@ client.on("ready", async () => {
             Routes.applicationCommands(client.user.id), // Registra comandos globalmente para tu aplicación
             { body: slashCommandsToRegister },
         );
-        console.log(`Se recargaron ${data.length} comandos slash (/) exitosamente.`);
+        console.log(`Successfully reloaded ${data.length} slash (/) commands.`); // Cambiado a inglés
     } catch (error) {
-        console.error('Error al registrar comandos slash:', error);
+        console.error('Error registering slash commands:', error); // Cambiado a inglés
     }
     // COMENTARIO: FIN DEL NUEVO BLOQUE DE REGISTRO DE COMANDOS SLASH
 
     // client.application.commands.fetch() // cache slash commands - Ya no es necesario si siempre registras
-    //      .then(cmds => {
-    //          if (cmds.size < 1) { // no commands!! deploy to test server
-    //              console.info("!!! No global commands found, deploying dev commands to test server (Use /deploy global=true to deploy global commands)");
-    //              // **COMENTADA LA LÍNEA QUE EJECUTABA DEPLOY AUTOMÁTICAMENTE:**
-    //              // client.commands.get("deploy").run(client, null, client.globalTools)
-    //          }
-    //      });
+    //       .then(cmds => {
+    //           if (cmds.size < 1) { // no commands!! deploy to test server
+    //               console.info("!!! No global commands found, deploying dev commands to test server (Use /deploy global=true to deploy global commands)");
+    //               // **COMENTADA LA LÍNEA QUE EJECUTABA DEPLOY AUTOMÁTICAMENTE:**
+    //               // client.commands.get("deploy").run(client, null, client.globalTools)
+    //           }
+    //       });
     // COMENTARIO: Bloque comentado, ya que el registro se hace arriba.
     // Si aún quieres un deploy condicional, la lógica deberá ser adaptada
     // para usar el 'rest.put' directamente en ese bloque, no el comando 'deploy'.
@@ -226,7 +226,7 @@ client.on("messageCreate", async message => {
     else {
         // --- MANEJO DE MENCIONES ---
         if (message.mentions.has(client.user.id)) {
-            console.log("¡El bot fue mencionado!");
+            console.log("Bot was mentioned!"); // Cambiado a inglés
             const mentionerId = message.author.id;
 
             if (autoResponses[mentionerId] && Array.isArray(autoResponses[mentionerId]) && autoResponses[mentionerId].length > 0) {
@@ -235,14 +235,14 @@ client.on("messageCreate", async message => {
                 try {
                     await message.reply({ content: response, allowedMentions: { repliedUser: false } });
                 } catch (error) {
-                    console.error("Error al responder a la mención:", error);
+                    console.error("Error replying to mention:", error); // Cambiado a inglés
                 }
             } else {
                 const defaultResponse = "My voice resonates with echoes of a power you do not yet comprehend.";
                 try {
                     await message.reply({ content: defaultResponse, allowedMentions: { repliedUser: false } });
                 } catch (error) {
-                    console.error("Error al responder con la respuesta predeterminada:", error);
+                    console.error("Error replying with default response:", error); // Cambiado a inglés
                 }
             }
         } else {
@@ -252,7 +252,7 @@ client.on("messageCreate", async message => {
             if (messageCommand && messageCommand.run) {
                 messageCommand.run(client, message, client.globalTools);
             } else {
-                // console.warn("Comando 'message' no encontrado o no tiene una función 'run'.");
+                // console.warn("Command 'message' not found or does not have a 'run' function.");
             }
         }
         // --- FIN DEL MANEJO DE MENCIONES ---
@@ -261,7 +261,10 @@ client.on("messageCreate", async message => {
 
 // on interaction
 client.on("interactionCreate", async int => {
-    if (!int.guild) return int.reply("You can't use commands in DMs!");
+    // CAMBIO CRÍTICO: Primero, un retorno temprano para DMs con un mensaje efímero
+    if (!int.guild) {
+        return int.reply({ content: "You can't use commands in DMs!", ephemeral: true });
+    }
 
     const tools = new Tools(client, int);
 
@@ -486,18 +489,24 @@ client.on("interactionCreate", async int => {
     }
 
     // dev perm check
-    if (foundCommand.metadata.dev && !tools.isDev()) return tools.warn("Only developers can use this!");
-    else if (config.lockBotToDevOnly && !tools.isDev()) return tools.warn("Only developers can use this bot!");
+    if (foundCommand.metadata.dev && !tools.isDev()) {
+        // CAMBIO: Usar tools.warn() para mensajes de advertencia, que ya son efímeros y en inglés.
+        // Si tools.warn() no es efímero, habría que modificar Tools.js
+        return tools.warn("Only developers can use this!");
+    } else if (config.lockBotToDevOnly && !tools.isDev()) {
+        // CAMBIO: Usar tools.warn()
+        return tools.warn("Only developers can use this bot!");
+    }
     
     try { 
         // <--- MODIFICACIÓN: Asegurar que se pase 'tools' a la función run
         await foundCommand.run(client, int, tools); 
     } catch(e) { 
-        console.error(`Error ejecutando comando ${foundCommand.metadata?.name || int.commandName || 'Desconocido'}:`, e);
+        console.error(`Error executing command ${foundCommand.metadata?.name || int.commandName || 'Unknown'}:`, e);
         if (int.replied || int.deferred) {
-            await int.followUp({ content: "**Error!** Hubo un problema al ejecutar este comando!", ephemeral: true }).catch(() => {}); 
+            await int.followUp({ content: "❌ Error! There was a problem executing this command.", ephemeral: true }).catch(() => {}); 
         } else {
-            await int.reply({ content: "**Error!** Hubo un problema al ejecutar este comando!", ephemeral: true }).catch(() => {}); 
+            await int.reply({ content: "❌ Error! There was a problem executing this command.", ephemeral: true }).catch(() => {}); 
         }
     }
 }); // <-- CIERRE CORRECTO DE interactionCreate

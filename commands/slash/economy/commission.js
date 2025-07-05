@@ -118,7 +118,7 @@ module.exports = {
             const activeCommission = freshUserProfile.acceptedCommission;
             const embed = new EmbedBuilder()
                 .setTitle('📜 Your Commission Status')
-                .setColor('#B30000'); 
+                .setColor('#325a97'); 
 
             if (!freshUserProfile.dailyCommissions || freshUserProfile.dailyCommissions.length === 0) {
                 embed.setDescription('You have no daily commissions assigned. They should reset at the start of a new day.');
