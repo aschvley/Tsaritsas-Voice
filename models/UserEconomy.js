@@ -1,8 +1,9 @@
 // Tsaritsa's-Voice/models/UserEconomy.js
 
 const mongoose = require('mongoose');
+const { Schema } = mongoose; // Desestructuramos Schema
 
-const UserEconomySchema = new mongoose.Schema({
+const UserEconomySchema = new Schema({
     userId: {
         type: String,
         required: true,
@@ -35,11 +36,14 @@ const UserEconomySchema = new mongoose.Schema({
         id: { type: String, required: true },
         completed: { type: Boolean, default: false },
     }],
-    // ****** ¡¡¡ESTE ES EL CAMBIO CRÍTICO Y CORRECTO AHORA!!! ******
+    // ****** ¡¡¡NUEVO INTENTO PARA acceptedCommission!!! ******
     acceptedCommission: {
-        id: { type: String },
-        type: { type: String },
-        index: { type: Number }
+        type: new Schema({ // Definimos un esquema anidado explícitamente para el sub-documento
+            id: { type: String, required: true }, // Aunque sea opcional el acceptedCommission, si existe, estas propiedades son requeridas
+            type: { type: String, required: true },
+            index: { type: Number, required: true }
+        }, { _id: false }), // _id: false para que Mongoose no cree un _id para este sub-documento
+        default: null // Permitimos que el campo completo sea null si no hay comisión aceptada
     },
     // ***************************************
     lastCommissionDate: {
@@ -51,13 +55,6 @@ const UserEconomySchema = new mongoose.Schema({
         default: false
     }
 });
-
-// AÑADIDO: Método para manejar el valor por defecto de acceptedCommission
-// Esto es para que si no se provee un valor, se guarde como null/undefined, no como un objeto vacío
-UserEconomySchema.path('acceptedCommission').default(function() {
-    return null;
-});
-
 
 const UserEconomy = mongoose.model('UserEconomy', UserEconomySchema);
 module.exports = UserEconomy;
