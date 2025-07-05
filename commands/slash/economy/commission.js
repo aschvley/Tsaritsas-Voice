@@ -2,10 +2,10 @@
 
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, Events } = require('discord.js');
 const { getOrCreateProfile, ensureDailyCommissions, completeCommissionOutcome } = require('../../../utils/economyUtils');
-const UserEconomy = require('../../../models/UserEconomy');
+const UserEconomy = require('../../../models/UserEconomy'); // Asegúrate de que esta línea esté, ya está
 const commissionsList = require('../../../data/commissionsList');
 
-// ********** NUEVA FUNCIÓN PARA MANEJAR REACTION CHALLENGE **********
+// ********** FUNCIÓN PARA MANEJAR REACTION CHALLENGE (SIN CAMBIOS RELEVANTES AQUÍ) **********
 async function handleReactionChallenge(client, interaction, userProfile, commissionDetails, commissionIndex) {
     const filter = (reaction, user) => {
         const validEmojis = commissionDetails.reactions.map(r => r.emoji);
@@ -36,7 +36,7 @@ async function handleReactionChallenge(client, interaction, userProfile, commiss
             const message = `${interaction.user.username} chose ${chosenOutcome.label}. ${outcomeData.message || ''}`;
 
             const resultEmbed = new EmbedBuilder()
-                .setTitle(`✅ Completed: ${commissionDetails.title}`) // Removido corchetes extra
+                .setTitle(`✅ Completed: ${commissionDetails.title}`)
                 .setDescription(message)
                 .setColor('#00FF00');
 
@@ -55,9 +55,13 @@ async function handleReactionChallenge(client, interaction, userProfile, commiss
                 resultEmbed.addFields({ name: 'Rewards', value: rewardsText.slice(0, -2) });
             }
 
-            await completeCommissionOutcome(userProfile, commissionIndex, rewards);
-            userProfile.acceptedCommission = null; 
-            await userProfile.save();
+            // userProfile ya debe estar actualizado desde el inicio del comando o re-obtenido si es necesario
+            // para asegurarse de que los cambios de acceptedCommission se reflejen correctamente
+            const freshProfileForUpdate = await getOrCreateProfile(interaction.user.id);
+            await completeCommissionOutcome(freshProfileForUpdate, commissionIndex, rewards);
+            // acceptedCommission se limpia dentro de completeCommissionOutcome ahora
+            // freshProfileForUpdate.acceptedCommission = null; 
+            // await freshProfileForUpdate.save(); // Se guarda dentro de completeCommissionOutcome
 
             await challengeMessage.edit({ embeds: [resultEmbed], content: `${interaction.user.username}'s challenge completed!`, components: [] });
             await challengeMessage.reactions.removeAll().catch(error => console.error('Failed to clear reactions:', error));
@@ -65,14 +69,15 @@ async function handleReactionChallenge(client, interaction, userProfile, commiss
         })
         .catch(async collected => {
             console.log('No reaction collected or time expired for reaction challenge.');
-            userProfile.acceptedCommission = null; 
-            await userProfile.save();
+            // Asegúrate de que el userProfile.acceptedCommission se limpie en caso de fallo también
+            const freshProfileForFailure = await getOrCreateProfile(interaction.user.id);
+            freshProfileForFailure.acceptedCommission = null; 
+            await freshProfileForFailure.save();
             await interaction.followUp({ content: 'You took too long to react, mission failed. Your active commission has been cleared, try again!', ephemeral: false });
             await challengeMessage.reactions.removeAll().catch(error => console.error('Failed to clear reactions:', error));
         });
 }
 // *******************************************************************
-
 
 module.exports = {
     metadata: new SlashCommandBuilder()
@@ -104,55 +109,50 @@ module.exports = {
         await interaction.deferReply(); 
 
         const userProfile = await getOrCreateProfile(interaction.user.id);
-        await ensureDailyCommissions(userProfile.userId);
-        await userProfile.save(); 
+        // ensureDailyCommissions ahora se encarga del reseteo a 00:00 UTC
+        // Asegúrate de que el resultado de ensureDailyCommissions se use si las comisiones fueron reiniciadas
+        const { newCommissions, commissions } = await ensureDailyCommissions(userProfile.userId);
+        userProfile.dailyCommissions = commissions; // Asigna las comisiones actualizadas (pueden ser las nuevas o las viejas)
+        // No es necesario userProfile.save() aquí de nuevo a menos que quieras asegurar algo específico después de ensureDailyCommissions
+        // ensureDailyCommissions ya hace un save si reinicia las comisiones.
+        // Pero para estar seguro que userProfile siempre tiene los datos más frescos antes de los subcomandos:
+        const freshUserProfileAfterReset = await getOrCreateProfile(interaction.user.id); // Recargar para asegurar el estado más reciente
+
 
         const command = interaction.options.getSubcommand();
 
         if (command === 'status') {
-            const freshUserProfile = await UserEconomy.findOne({ userId: interaction.user.id });
-            if (!freshUserProfile) {
-                return interaction.editReply({ content: 'Your profile could not be found after update. Please try again or contact support.', ephemeral: true });
-            }
-
-            const activeCommission = freshUserProfile.acceptedCommission;
+            const activeCommission = freshUserProfileAfterReset.acceptedCommission;
             const embed = new EmbedBuilder()
                 .setTitle('📜 Your Commission Status')
                 .setColor('#325a97'); 
 
-            if (!freshUserProfile.dailyCommissions || freshUserProfile.dailyCommissions.length === 0) {
-                embed.setDescription('You have no daily commissions assigned. They should reset at the start of a new day.');
+            if (!freshUserProfileAfterReset.dailyCommissions || freshUserProfileAfterReset.dailyCommissions.length === 0) {
+                embed.setDescription('You have no daily commissions assigned. They should reset daily at 00:00 UTC.');
             } else {
                 let description = '';
-                freshUserProfile.dailyCommissions.forEach((commissionData, index) => {
+                freshUserProfileAfterReset.dailyCommissions.forEach((commissionData, index) => {
                     const commissionDetails = commissionsList.find(c => c.id === commissionData.id);
                     const statusEmoji = commissionData.completed ? '✅ Completed' : '🕒 Pending';
                     const activeIndicator = activeCommission && activeCommission.id === commissionData.id ? '(Active)' : '';
 
                     if (commissionDetails) {
-                        // **** CAMBIO AQUÍ: Formato del título sin corchetes dobles extra ****
                         description += `${index + 1}. ${commissionDetails.title} ${statusEmoji} ${activeIndicator}\n`;
                     } else {
-                        // Mensaje más amigable si una misión es "desconocida", aunque esto debería ser raro ahora.
                         description += `${index + 1}. Unknown Mission (ID: ${commissionData.id}) ${statusEmoji}\n`;
                     }
                 });
                 embed.setDescription(description);
 
-                // **** NUEVO MENSAJE DE AYUDA ****
-                const hasPending = freshUserProfile.dailyCommissions.some(c => !c.completed);
+                const hasPending = freshUserProfileAfterReset.dailyCommissions.some(c => !c.completed);
                 if (hasPending) {
                     embed.addFields({ name: '\u200B', value: 'Use `/commission claim <number>` to begin one of your available missions.' });
                 }
             }
 
-            // **** CAMBIO AQUÍ: Formato de la hora ****
-            // Opciones para toLocaleTimeString para un formato más legible (ej. "10:39 PM")
-            const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: true }; 
-            // Usamos 'en-US' para asegurar el formato AM/PM estándar.
-            const formattedTime = new Date().toLocaleTimeString('en-US', timeOptions); 
-
-            embed.setFooter({ text: `Today at ${formattedTime}` });
+            // **** CAMBIO AQUÍ: Mensaje del footer para indicar el reinicio UTC ****
+            embed.setFooter({ text: 'Commissions reset daily at 00:00 UTC.' });
+            
             await interaction.editReply({ embeds: [embed], ephemeral: true });
 
         } else if (command === 'claim') {
@@ -163,7 +163,7 @@ module.exports = {
                 return interaction.editReply({ content: 'Please provide a commission number between 1 and 4.', ephemeral: true });
             }
 
-            const userCommissions = userProfile.dailyCommissions;
+            const userCommissions = freshUserProfileAfterReset.dailyCommissions; // Usa el perfil fresco
             if (!userCommissions || userCommissions.length === 0) {
                 return interaction.editReply({ content: 'You have no daily commissions to claim. Use `/commission status` to check.', ephemeral: true });
             }
@@ -186,21 +186,21 @@ module.exports = {
                 });
             }
             
-            if (userProfile.acceptedCommission) {
-                if (userProfile.acceptedCommission.id === commissionToClaimData.id) {
+            if (freshUserProfileAfterReset.acceptedCommission) { // Usa el perfil fresco
+                if (freshUserProfileAfterReset.acceptedCommission.id === commissionToClaimData.id) {
                     await interaction.editReply({ content: `You already have an active commission: **${commissionDetails.title}**. Showing it again.`, ephemeral: true });
                 } else {
-                    const activeMissionTitle = commissionsList.find(c => c.id === userProfile.acceptedCommission.id)?.title || 'Unknown Mission';
+                    const activeMissionTitle = commissionsList.find(c => c.id === freshUserProfileAfterReset.acceptedCommission.id)?.title || 'Unknown Mission';
                     return interaction.editReply({ content: `You already have an active commission: **${activeMissionTitle}**. Complete or skip that one first.`, ephemeral: true });
                 }
             } else {
-                userProfile.acceptedCommission = {
-                    id: commissionDetails.id,
-                    type: commissionDetails.type,
-                    index: commissionIndex,
-                };
-                await userProfile.save();
-                await interaction.editReply({ content: `You have accepted: **${commissionDetails.title}**`, ephemeral: true });
+                // Aquí, usa la función `acceptCommission` de economyUtils, que ya guarda el perfil
+                const accepted = await acceptCommission(interaction.user.id, commissionDetails.id); 
+                if (accepted) {
+                    await interaction.editReply({ content: `You have accepted: **${commissionDetails.title}**`, ephemeral: true });
+                } else {
+                    return interaction.editReply({ content: `Could not accept commission. Please try again.`, ephemeral: true });
+                }
             }
 
             let replyMessage = `<@${interaction.user.id}> has accepted: **${commissionDetails.title}**\n`;
@@ -227,14 +227,14 @@ module.exports = {
                     }
                     if (rewardsText) {
                         simpleRewardEmbed.addFields({ name: 'Rewards', value: rewardsText.slice(0, -2) });
-                        await completeCommissionOutcome(userProfile, commissionIndex, commissionDetails.reward);
+                        await completeCommissionOutcome(freshUserProfileAfterReset, commissionIndex, commissionDetails.reward); // Pasa el perfil fresco
                     } else {
-                        await completeCommissionOutcome(userProfile, commissionIndex, {});
+                        await completeCommissionOutcome(freshUserProfileAfterReset, commissionIndex, {}); // Pasa el perfil fresco
                     }
 
-                    userProfile.acceptedCommission = null;
-                    await userProfile.save();
-
+                    // acceptedCommission se limpia dentro de completeCommissionOutcome
+                    // No es necesario userProfile.acceptedCommission = null; await userProfile.save(); aquí
+                    
                     await interaction.followUp({ embeds: [simpleRewardEmbed], ephemeral: false }); 
                     return; 
 
@@ -269,49 +269,35 @@ module.exports = {
                     break;
 
                 case 'reactionChallenge':
-                    await handleReactionChallenge(client, interaction, userProfile, commissionDetails, commissionIndex);
+                    await handleReactionChallenge(client, interaction, freshUserProfileAfterReset, commissionDetails, commissionIndex); // Pasa el perfil fresco
                     break; 
 
                 default:
-                    userProfile.acceptedCommission = null;
-                    await userProfile.save();
+                    // Limpiar acceptedCommission en caso de tipo no soportado
+                    freshUserProfileAfterReset.acceptedCommission = null;
+                    await freshUserProfileAfterReset.save();
                     return interaction.editReply({ content: `This type of commission (${commissionDetails.type}) is not yet supported and your active commission has been cleared.`, ephemeral: true });
             }
 
         } else if (command === 'skip') {
-            if (userProfile.skippedCommission) {
+            // Asegúrate de usar el perfil más reciente
+            if (freshUserProfileAfterReset.skippedCommission) {
                 return interaction.editReply({ content: 'You have already skipped a mission today. Try again tomorrow.', ephemeral: true });
             }
 
-            const pendingCommissions = userProfile.dailyCommissions.filter(c => !c.completed);
+            const pendingCommissions = freshUserProfileAfterReset.dailyCommissions.filter(c => !c.completed);
             if (pendingCommissions.length === 0) {
                 return interaction.editReply({ content: 'You have no pending commissions to skip!', ephemeral: true });
             }
 
-            let commissionToSkipData;
-            let indexToSkip = -1;
+            // La función skipCommission de economyUtils ya maneja la lógica de cuál skipear
+            const skipResult = await skipCommission(interaction.user.id);
 
-            if (userProfile.acceptedCommission && !userProfile.dailyCommissions[userProfile.acceptedCommission.index].completed) {
-                commissionToSkipData = userProfile.dailyCommissions[userProfile.acceptedCommission.index];
-                indexToSkip = userProfile.acceptedCommission.index;
+            if (skipResult.success) {
+                 await interaction.editReply({ content: `🗑️ <@${interaction.user.id}> ${skipResult.message}`, ephemeral: false });
             } else {
-                commissionToSkipData = pendingCommissions[0];
-                indexToSkip = userProfile.dailyCommissions.findIndex(c => c.id === commissionToSkipData.id);
+                 await interaction.editReply({ content: `Failed to skip commission: ${skipResult.message}`, ephemeral: true });
             }
-
-            if (indexToSkip === -1 || !commissionToSkipData) {
-                return interaction.editReply({ content: 'Could not find a commission to skip.', ephemeral: true });
-            }
-            
-            userProfile.dailyCommissions[indexToSkip].completed = true;
-            userProfile.skippedCommission = true;
-            userProfile.acceptedCommission = null;
-            await userProfile.save();
-
-            const skippedDetails = commissionsList.find(c => c.id === commissionToSkipData.id);
-            const skippedName = skippedDetails ? skippedDetails.title : 'Unknown Mission';
-
-            await interaction.editReply({ content: `🗑️ <@${interaction.user.id}> skipped the mission: **${skippedName}**. They can skip another one tomorrow.`, ephemeral: false });
         }
     },
 
@@ -320,7 +306,8 @@ module.exports = {
 
         const [commandPrefix, componentType, missionId, outcomeIndexStr] = interaction.customId.split('_');
 
-        const userProfile = await getOrCreateProfile(interaction.user.id);
+        // Asegurarse de obtener la versión más reciente del perfil
+        const userProfile = await getOrCreateProfile(interaction.user.id); 
         const acceptedCommission = userProfile.acceptedCommission;
 
         if (!acceptedCommission || acceptedCommission.id !== missionId || userProfile.userId !== interaction.user.id) {
@@ -356,7 +343,7 @@ module.exports = {
         const message = `${interaction.user.username} has chosen: **${outcomeData.label || selectedValue || "a path"}**. ${outcomeData.message || ''}`;
 
         const resultEmbed = new EmbedBuilder()
-            .setTitle(`✅ Completed: ${commissionDetails.title}`) // Removido corchetes extra
+            .setTitle(`✅ Completed: ${commissionDetails.title}`)
             .setDescription(message)
             .setColor('#00FF00');
 
@@ -375,9 +362,10 @@ module.exports = {
             resultEmbed.addFields({ name: 'Rewards', value: rewardsText.slice(0, -2) });
         }
 
+        // Pasa el userProfile actualizado para completeCommissionOutcome
         await completeCommissionOutcome(userProfile, acceptedCommission.index, rewards);
-        userProfile.acceptedCommission = null; 
-        await userProfile.save();
+        // userProfile.acceptedCommission y userProfile.save() ya se manejan dentro de completeCommissionOutcome
+        // No es necesario userProfile.acceptedCommission = null; await userProfile.save(); aquí
 
         await interaction.message.edit({ embeds: [resultEmbed], components: [] });
     }
