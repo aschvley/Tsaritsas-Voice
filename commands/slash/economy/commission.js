@@ -31,11 +31,11 @@ module.exports = {
                 .setDescription('Skip one daily commission for today.')
         ),
 
-    // <--- MODIFICACIÓN CRÍTICA: Cambiado de 'execute' a 'run' y añadido 'client', 'tools'
-    async run(client, interaction, tools) { // Aquí se recibe client y tools
-        await interaction.deferReply({ ephemeral: true });
+    async run(client, interaction, tools) {
+        // CAMBIO AQUI: Quitar { ephemeral: true } para que el deferReply sea público.
+        // Si queremos que solo el 'status' sea privado, podemos manejarlo adentro.
+        await interaction.deferReply(); // OJO: Quité el 'ephemeral: true' AQUI
 
-        // Ya tenías esto, que está perfecto para asegurar el perfil y las comisiones
         const userProfile = await getOrCreateProfile(interaction.user.id);
         await ensureDailyCommissions(userProfile.userId);
         await userProfile.save();
@@ -45,7 +45,7 @@ module.exports = {
         if (command === 'status') {
             const freshUserProfile = await UserEconomy.findOne({ userId: interaction.user.id });
             if (!freshUserProfile) {
-                return interaction.editReply('Your profile could not be found after update. Please try again or contact support.');
+                return interaction.editReply({ content: 'Your profile could not be found after update. Please try again or contact support.', ephemeral: true }); // Este sí lo dejamos privado
             }
 
             const activeCommission = freshUserProfile.acceptedCommission;
@@ -72,41 +72,42 @@ module.exports = {
             }
 
             embed.setFooter({ text: `Today at ${new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}` });
-            await interaction.editReply({ embeds: [embed] });
-
+            // CAMBIO AQUI: La respuesta de status SIEMPRE debe ser privada.
+            await interaction.editReply({ embeds: [embed], ephemeral: true }); // Este se mantiene privado
+            
         } else if (command === 'claim') {
             const num = interaction.options.getInteger('number');
             const commissionIndex = num - 1;
 
             if (num < 1 || num > 4) {
-                return interaction.editReply('Please provide a commission number between 1 and 4.');
+                return interaction.editReply({ content: 'Please provide a commission number between 1 and 4.', ephemeral: true }); // Privado
             }
 
             const userCommissions = userProfile.dailyCommissions;
             if (!userCommissions || userCommissions.length === 0) {
-                return interaction.editReply('You have no daily commissions to claim. Use `/commission status` to check.');
+                return interaction.editReply({ content: 'You have no daily commissions to claim. Use `/commission status` to check.', ephemeral: true }); // Privado
             }
 
             const commissionToClaimData = userCommissions[commissionIndex];
             if (!commissionToClaimData) {
-                return interaction.editReply('There is no mission in that slot. Please check your `/commission status`.');
+                return interaction.editReply({ content: 'There is no mission in that slot. Please check your `/commission status`.', ephemeral: true }); // Privado
             }
 
             if (commissionToClaimData.completed) {
-                return interaction.editReply('This commission has already been completed or skipped today.');
+                return interaction.editReply({ content: 'This commission has already been completed or skipped today.', ephemeral: true }); // Privado
             }
 
             if (userProfile.acceptedCommission && userProfile.acceptedCommission.id === commissionToClaimData.id) {
-                return interaction.editReply(`You already have an active commission: **[[${commissionsList.find(c => c.id === userProfile.acceptedCommission.id)?.title || 'Unknown Mission'}]]**. Complete or skip that one first.`);
+                return interaction.editReply({ content: `You already have an active commission: **[[${commissionsList.find(c => c.id === userProfile.acceptedCommission.id)?.title || 'Unknown Mission'}]]**. Complete or skip that one first.`, ephemeral: true }); // Privado
             }
             if (userProfile.acceptedCommission) {
-                return interaction.editReply(`You already have an active commission. Complete or skip that one first.`);
+                return interaction.editReply({ content: `You already have an active commission. Complete or skip that one first.`, ephemeral: true }); // Privado
             }
 
             const commissionDetails = commissionsList.find(c => c.id === commissionToClaimData.id);
 
             if (!commissionDetails) {
-                return interaction.editReply('The selected commission data could not be found. It might be corrupted or removed.');
+                return interaction.editReply({ content: 'The selected commission data could not be found. It might be corrupted or removed.', ephemeral: true }); // Privado
             }
 
             // Marcar la misión como aceptada en el perfil del usuario
@@ -117,10 +118,10 @@ module.exports = {
             };
             await userProfile.save();
 
-            let replyMessage = `You have accepted: **[[${commissionDetails.title}]]**\n`;
+            let replyMessage = `<@${interaction.user.id}> has accepted: **[[${commissionDetails.title}]]**\n`; // CAMBIO: Mensaje público
             const row = new ActionRowBuilder();
             let componentsToAdd = [];
-            let ephemeral = true;
+            let ephemeralClaim = false; // CAMBIO CLAVE: Los mensajes de claim ahora NO son efímeros por defecto.
 
             switch (commissionDetails.type) {
                 case 'simple':
@@ -150,7 +151,8 @@ module.exports = {
                     userProfile.acceptedCommission = null;
                     await userProfile.save();
 
-                    await interaction.editReply({ embeds: [simpleRewardEmbed] });
+                    // CAMBIO AQUI: La respuesta final de simple siempre será pública.
+                    await interaction.editReply({ embeds: [simpleRewardEmbed] }); // NO ephemeral
                     return;
 
                 case 'buttonOutcome':
@@ -164,6 +166,7 @@ module.exports = {
                         );
                     });
                     componentsToAdd.push(row);
+                    // ephemeralClaim se mantiene en false
                     break;
 
                 case 'multipleChoice':
@@ -179,36 +182,36 @@ module.exports = {
                         );
                     row.addComponents(selectMenu);
                     componentsToAdd.push(row);
+                    // ephemeralClaim se mantiene en false
                     break;
 
                 case 'reactionChallenge':
                     replyMessage += `\n**${commissionDetails.prompt}**\nReact with the appropriate emoji!`;
-                    // For reactionChallenge, the interaction is handled with reactions on a regular (non-ephemeral) message.
-                    // This type will need a regular message (not ephemeral) and a message collector or similar logic.
-                    ephemeral = false; // Make the message public for reactions
+                    ephemeralClaim = false; // Ya era false para este tipo
                     break;
 
                 default:
-                    return interaction.editReply(`This type of commission (${commissionDetails.type}) is not yet supported.`);
+                    return interaction.editReply({ content: `This type of commission (${commissionDetails.type}) is not yet supported.`, ephemeral: true }); // Esto sí, que sea privado.
             }
 
-            await interaction.editReply({ content: replyMessage, components: componentsToAdd, ephemeral: ephemeral });
+            // CAMBIO AQUI: Usar ephemeralClaim para la respuesta de claim
+            await interaction.editReply({ content: replyMessage, components: componentsToAdd, ephemeral: ephemeralClaim });
 
         } else if (command === 'skip') {
             if (userProfile.skippedCommission) {
-                return interaction.editReply('You have already skipped a mission today. Try again tomorrow.');
+                return interaction.editReply({ content: 'You have already skipped a mission today. Try again tomorrow.', ephemeral: true }); // Privado
             }
 
             const pendingCommissions = userProfile.dailyCommissions.filter(c => !c.completed);
             if (pendingCommissions.length === 0) {
-                return interaction.editReply('You have no pending commissions to skip!');
+                return interaction.editReply({ content: 'You have no pending commissions to skip!', ephemeral: true }); // Privado
             }
 
             const commissionToSkipData = pendingCommissions[0];
             const commissionIndex = userProfile.dailyCommissions.findIndex(c => c.id === commissionToSkipData.id);
 
             if (commissionIndex === -1) {
-                return interaction.editReply('Could not find a commission to skip.');
+                return interaction.editReply({ content: 'Could not find a commission to skip.', ephemeral: true }); // Privado
             }
 
             userProfile.dailyCommissions[commissionIndex].completed = true;
@@ -219,19 +222,17 @@ module.exports = {
             const skippedDetails = commissionsList.find(c => c.id === commissionToSkipData.id);
             const skippedName = skippedDetails ? skippedDetails.title : 'Unknown Mission';
 
-            await interaction.editReply(`You skipped the mission: **[[${skippedName}]]**. You can skip another one tomorrow.`);
+            // CAMBIO AQUI: Skip siempre público
+            await interaction.editReply({ content: `🗑️ <@${interaction.user.id}> skipped the mission: **[[${skippedName}]]**. They can skip another one tomorrow.`, ephemeral: false });
         }
     },
 
     // Función para manejar las interacciones de componentes (botones y selectores) de las comisiones
     async handleComponentInteraction(interaction) {
-        // <--- MODIFICACIÓN: Crear Tools aquí si es necesario, o asume que no la usas en este handler
-        // const client = interaction.client;
-        // const tools = new Tools(client, interaction); 
+        // En handleComponentInteraction NO se usa deferReply inicial, la interacción ya está "deferida"
+        // o respondida por el mensaje que contiene el componente.
+        // Lo que debemos hacer es MANEJAR LA RESPUESTA al componente.
 
-        await interaction.deferUpdate(); // Deferir la actualización para que el usuario sepa que se está procesando
-
-        // El customId tendrá el formato: 'commission_select_<missionID>' o 'commission_button_<missionID>_<outcomeIndex>'
         const [commandPrefix, componentType, missionId, outcomeIndexStr] = interaction.customId.split('_');
 
         const userProfile = await getOrCreateProfile(interaction.user.id);
@@ -239,12 +240,18 @@ module.exports = {
 
         // Validar que la interacción corresponde a la misión activa del usuario
         if (!acceptedCommission || acceptedCommission.id !== missionId) {
-            return interaction.followUp({ content: 'This interaction is no longer valid or not for your current active commission.', ephemeral: true });
+            // CAMBIO AQUI: Siempre usar followUp y asegurarse de que sea público si el original es público.
+            // Si el mensaje original era efímero, este followUp debe serlo también.
+            // Si el mensaje original NO era efímero, este followUp PUEDE serlo o no.
+            // Para simplicidad, haremos que las interacciones de componente de "claim" siempre resulten en un mensaje público.
+            await interaction.deferReply({ ephemeral: false }); // Deferir la respuesta como pública
+            return interaction.editReply({ content: 'This interaction is no longer valid or not for your current active commission.', ephemeral: false });
         }
 
         const commissionDetails = commissionsList.find(c => c.id === missionId);
         if (!commissionDetails) {
-            return interaction.followUp({ content: 'Commission details not found. Please contact support.', ephemeral: true });
+            await interaction.deferReply({ ephemeral: false });
+            return interaction.editReply({ content: 'Commission details not found. Please contact support.', ephemeral: false });
         }
 
         let outcomeData;
@@ -259,26 +266,23 @@ module.exports = {
             if (selectedOption && commissionDetails.outcomes[selectedOption.outcome]) {
                 outcomeData = commissionDetails.outcomes[selectedOption.outcome]; // Obtener el objeto de outcome real
             }
-        } else if (componentType === 'modal') { // <--- Añadido para el manejo de modales
-            // Asume que tu modal customId es 'commission_modal_<missionID>'
-            const modalInput = interaction.fields.getTextInputValue('commission_modal_input'); // Reemplaza 'commission_modal_input' con el ID real de tu TextInput
-            // Aquí puedes procesar el input del modal. outcomeData podría depender de este input.
-            // Por ejemplo, podrías tener un outcome específico basado en el input o una lógica más compleja.
-            // Para este ejemplo, solo usaremos un mensaje genérico.
+        } else if (componentType === 'modal') { // Para modales, la interacción ya fue deferida al enviar el modal.
+            const modalInput = interaction.fields.getTextInputValue('commission_modal_input');
             outcomeData = {
                 message: `You submitted: "${modalInput}". Processing the result...`,
                 rewards: { mora: 20, reputation: 1 } // Ejemplo de recompensa para el modal
             };
-            await interaction.deferUpdate(); // Para modales, ya deferiste la respuesta inicial
+            // No es necesario deferir aquí, la interacción de modal ya se responde al final
         }
 
-
         if (!outcomeData) {
-            return interaction.followUp({ content: 'Could not process your choice for the commission. Outcome data missing.', ephemeral: true });
+            await interaction.deferReply({ ephemeral: false });
+            return interaction.editReply({ content: 'Could not process your choice for the commission. Outcome data missing.', ephemeral: false });
         }
 
         const rewards = outcomeData.rewards || {};
-        const message = outcomeData.message || (componentType === 'button' ? outcomeData.label : `You chose: ${selectedValue}`);
+        // Mensaje visible en el canal con el resultado.
+        const message = `${interaction.user.username} has chosen: ${outcomeData.label || selectedValue || "a path"}. ${outcomeData.message || ''}`;
 
         const resultEmbed = new EmbedBuilder()
             .setTitle(`✅ Completed: [[${commissionDetails.title}]]`)
@@ -304,7 +308,18 @@ module.exports = {
         userProfile.acceptedCommission = null;
         await userProfile.save();
 
-        // Editar el mensaje original de la interacción para mostrar el resultado y eliminar los componentes
-        await interaction.editReply({ embeds: [resultEmbed], components: [] });
+        // CAMBIO CLAVE AQUI PARA HACER LA RESPUESTA PÚBLICA
+        // La interaction.message es el mensaje original que contenía los componentes.
+        // Si ese mensaje era efímero, no se puede editar a público.
+        // La mejor manera es eliminar el mensaje efímero anterior y enviar uno nuevo público.
+
+        if (interaction.message.ephemeral) {
+            // Si el mensaje original era efímero, lo borramos y enviamos uno nuevo público.
+            await interaction.message.delete().catch(err => console.error("Error deleting ephemeral message:", err)); // Intentamos borrarlo silenciosamente
+            await interaction.followUp({ embeds: [resultEmbed], ephemeral: false }); // Nuevo mensaje público
+        } else {
+            // Si el mensaje original NO era efímero (como en reactionChallenge), entonces sí podemos editarlo.
+            await interaction.editReply({ embeds: [resultEmbed], components: [] }); // Edita el mensaje original (público)
+        }
     }
 };
