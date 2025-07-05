@@ -31,23 +31,17 @@ const UserEconomySchema = new mongoose.Schema({
         default: 0,
         min: 0
     },
-    // ¡CAMBIO AQUÍ! Ahora es un array de objetos
     dailyCommissions: [{
         id: { type: String, required: true },
         completed: { type: Boolean, default: false },
-        // Puedes añadir más campos si lo necesitas, como 'currentStep', 'progress', etc.
     }],
-    // ****** ¡¡¡CAMBIO CRÍTICO AQUI!!! ******
-    // acceptedCommission ya no es un String, ahora es un Objeto con la estructura esperada
+    // ****** ¡¡¡ESTE ES EL CAMBIO CRÍTICO Y CORRECTO AHORA!!! ******
     acceptedCommission: {
-        type: { // Define la estructura del objeto anidado
-            id: { type: String },
-            type: { type: String }, // Para almacenar el tipo de misión (simple, buttonOutcome, etc.)
-            index: { type: Number } // Para almacenar el índice de la misión en dailyCommissions
-        },
-        default: null // Sigue siendo null por defecto si no hay comisión aceptada
+        id: { type: String },
+        type: { type: String },
+        index: { type: Number }
     },
-
+    // ***************************************
     lastCommissionDate: {
         type: Date,
         default: null
@@ -57,6 +51,13 @@ const UserEconomySchema = new mongoose.Schema({
         default: false
     }
 });
+
+// AÑADIDO: Método para manejar el valor por defecto de acceptedCommission
+// Esto es para que si no se provee un valor, se guarde como null/undefined, no como un objeto vacío
+UserEconomySchema.path('acceptedCommission').default(function() {
+    return null;
+});
+
 
 const UserEconomy = mongoose.model('UserEconomy', UserEconomySchema);
 module.exports = UserEconomy;
