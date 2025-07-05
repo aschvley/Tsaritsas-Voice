@@ -37,10 +37,17 @@ const UserEconomySchema = new mongoose.Schema({
         completed: { type: Boolean, default: false },
         // Puedes añadir más campos si lo necesitas, como 'currentStep', 'progress', etc.
     }],
-    acceptedCommission: { // Este debería almacenar el ID de la misión aceptada actualmente para el progreso
-        type: String,
-        default: null
+    // ****** ¡¡¡CAMBIO CRÍTICO AQUI!!! ******
+    // acceptedCommission ya no es un String, ahora es un Objeto con la estructura esperada
+    acceptedCommission: {
+        type: { // Define la estructura del objeto anidado
+            id: { type: String },
+            type: { type: String }, // Para almacenar el tipo de misión (simple, buttonOutcome, etc.)
+            index: { type: Number } // Para almacenar el índice de la misión en dailyCommissions
+        },
+        default: null // Sigue siendo null por defecto si no hay comisión aceptada
     },
+
     lastCommissionDate: {
         type: Date,
         default: null
