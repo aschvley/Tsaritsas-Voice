@@ -6,8 +6,6 @@ const UserEconomy = require('../../../models/UserEconomy'); // Ruta ajustada
 const MORA_EMOJI = '<:mora:1390470693648470026>'; // Tu emoji personalizado
 
 module.exports = {
-    // ¡¡¡CAMBIO CRÍTICO AQUÍ!!!
-    // El SlashCommandBuilder debe ser directamente la propiedad 'metadata'
     metadata: new SlashCommandBuilder()
         .setName('leaderboard')
         .setDescription('Shows the users with the most mora.'),
@@ -17,14 +15,14 @@ module.exports = {
 
         // Obtener los 10 usuarios con más mora, ordenados de forma descendente
         // Excluir usuarios con balance 0 si quieres
-        const topUsers = await UserEconomy.find()
+        const topUsers = await UserEconomy.find({ balance: { $gt: 0 } }) // <--- ¡¡¡CAMBIO AQUÍ!!!
             .sort({ balance: -1 }) // Ordenar de mayor a menor
             .limit(10); // Limitar a los 10 primeros
 
         if (topUsers.length === 0) {
             const noDataEmbed = new EmbedBuilder()
                 .setColor('Yellow')
-                .setDescription('Currently there is no economy data to display in the leaderboard.')
+                .setDescription('Currently there is no economy data to display in the leaderboard with more than 0 Mora.') // <--- CAMBIO EN MENSAJE
                 .setTimestamp()
                 .setFooter({ text: 'Tsaritsa\'s Voice Economy System', iconURL: client.user.displayAvatarURL() });
             return await interaction.editReply({ embeds: [noDataEmbed] });
@@ -41,7 +39,7 @@ module.exports = {
 
         const leaderboardEmbed = new EmbedBuilder()
             .setColor('#0099ff') // Un color azul para el leaderboard
-            .setTitle('🏆 Top 10 Rich 🏆')
+            .setTitle('🏆 Top 10 Richest People🏆') // <--- SUGERENCIA DE CAMBIO DE TÍTULO
             .setDescription(description)
             .setTimestamp()
             .setFooter({ text: 'Tsaritsa\'s Voice Economy System', iconURL: client.user.displayAvatarURL() });
