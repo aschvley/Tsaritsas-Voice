@@ -62,18 +62,6 @@ async function ensureDailyCommissions(userId) {
     return { newCommissions: false, commissions: profile.dailyCommissions };
 }
 
-
-// La función `assignCommissions` ya no es necesaria con `ensureDailyCommissions`
-// async function assignCommissions(userId, commissionIds) {
-//     const profile = await getOrCreateProfile(userId);
-//     profile.dailyCommissions = commissionIds.map(id => ({ id: id, completed: false }));
-//     profile.lastCommissionDate = new Date();
-//     profile.acceptedCommission = null;
-//     profile.skippedCommission = false;
-//     await profile.save();
-//     return profile.dailyCommissions;
-// }
-
 async function acceptCommission(userId, commissionId) {
     const profile = await getOrCreateProfile(userId);
     // Asegurarse de que la comisión exista en dailyCommissions antes de aceptarla
@@ -119,6 +107,39 @@ async function skipCommission(userId) {
     return { success: false, message: 'Could not find a mission to skip.' };
 }
 
+// *********** ¡¡¡AÑADE ESTA FUNCIÓN AQUÍ!!! ***********
+async function completeCommissionOutcome(userProfile, commissionIndex, rewards) {
+    // Asegúrate de que userProfile y commissionIndex sean válidos
+    if (!userProfile || commissionIndex === undefined || commissionIndex < 0 || commissionIndex >= userProfile.dailyCommissions.length) {
+        console.error("Invalid userProfile or commissionIndex provided to completeCommissionOutcome.");
+        return { success: false, message: "Invalid commission data." };
+    }
+
+    // Marca la comisión como completada
+    userProfile.dailyCommissions[commissionIndex].completed = true;
+
+    // Aplica las recompensas
+    if (rewards && typeof rewards === 'object') {
+        if (rewards.mora) {
+            userProfile.balance += rewards.mora;
+        }
+        if (rewards.intelFragments) {
+            userProfile.intelFragments += rewards.intelFragments;
+        }
+        if (rewards.reputation) {
+            userProfile.reputation += rewards.reputation;
+        }
+    }
+
+    // Limpia la comisión aceptada
+    userProfile.acceptedCommission = null;
+
+    // Guarda los cambios
+    await userProfile.save();
+
+    return { success: true, message: "Commission completed and rewards applied!" };
+}
+// *****************************************************
 
 function formatTime(ms) {
     const seconds = Math.floor((ms / 1000) % 60);
@@ -148,9 +169,9 @@ module.exports = {
     updateBalance,
     updateIntelFragments,
     updateReputation,
-    // assignCommissions, // Ya no se exporta
     acceptCommission,
     skipCommission,
-    ensureDailyCommissions, // Nueva función para exportar
+    ensureDailyCommissions, //nueva funcion para exportar
+    completeCommissionOutcome, // añadida para eliminar error
     formatTime
 };
