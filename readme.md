@@ -1,6 +1,7 @@
 # 🚀 Tsaritsa's Voice - XP Bot
 
 ✨ A Fatui-themed level system bot for Discord, designed to bring personality, progression, and immersive style to your Genshin Impact-inspired server. ✨
+[![Ver Documentación en Inglés](https://deepwiki.com/badge.svg)](https://deepwiki.com/aschvley/Tsaritsas-Voice/1-overview)
 
 ## 🛠️ Technologies Used
 
