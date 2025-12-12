@@ -4,7 +4,7 @@ const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const UserEconomy = require('../../../models/UserEconomy');
 
 // Define el emoji de mora personalizado aquí para fácil acceso y consistencia
-const MORA_EMOJI = '<:mora:1390470693648470026>';
+const MORA_EMOJI = '<:mora:1449102937262657668>';
 
 module.exports = {
     // ¡¡¡CAMBIO CRÍTICO AQUÍ!!!

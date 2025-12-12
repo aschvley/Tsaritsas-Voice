@@ -13,7 +13,7 @@ module.exports = {
     const fatuiFacts = JSON.parse(fs.readFileSync(fatuiFactsPath, 'utf8')).fatui_facts;
 
     // Determine which Harbinger fact to send based on button click
-    let fact = '🧊 Here is a general Fatui fact:';
+    let fact = '🧊 Here is a general Fatui fact:'; //CAMBIAR A FLINS
     
     if (interaction.customId === 'general') {
       fact = fatuiFacts.General[Math.floor(Math.random() * fatuiFacts.General.length)];

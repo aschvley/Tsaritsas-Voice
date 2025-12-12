@@ -1,3 +1,5 @@
+//ACTUALIZAR CON NUEVOS COMANDOS + DIFERENTE A ECONOMIA
+
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 
 module.exports = {
@@ -9,7 +11,7 @@ module.exports = {
         try {
             // Crear el embed para el comando de ayuda
             const embed = new EmbedBuilder()
-                .setTitle("Tsaritsa's Voice — Command List ❄️")
+                .setTitle("Tsaritsa\'s Voice — Command List ❄️")
                 .setColor(0x91c9f7)
                 .setDescription("Here is what I can do for you, servant of Her Majesty:")
                 .addFields(

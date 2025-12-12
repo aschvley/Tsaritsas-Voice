@@ -46,7 +46,8 @@ async function handleReactionChallenge(client, interaction, userProfile, commiss
                 if (amount > 0) {
                     switch (type) {
                         case 'mora': rewardsText += `💰 ${amount} Mora, `; break;
-                        case 'intelFragments': rewardsText += `🧩 ${amount} Intel Fragments, `; break;
+                        //TO-DO: CAMBIAR A OTRA COSA
+                        case 'intelFragments': rewardsText += `🧩 ${amount} Intel Fragments, `; break; 
                         case 'reputation': rewardsText += `⭐ ${amount} Reputation, `; break;
                     }
                 }
@@ -77,7 +78,7 @@ async function handleReactionChallenge(client, interaction, userProfile, commiss
 module.exports = {
     metadata: new SlashCommandBuilder()
         .setName('commission')
-        .setDescription('Manage your daily Fatui commissions.')
+        .setDescription('Manage your daily commissions.')
         .addSubcommand(subcommand =>
             subcommand
                 .setName('status')

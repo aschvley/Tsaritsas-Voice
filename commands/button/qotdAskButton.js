@@ -7,7 +7,7 @@ module.exports = {
     async execute(client, interaction) {
         const modal = new ModalBuilder()
             .setCustomId('qotd-modal')
-            .setTitle('❄️ Write the Question of the Day ❄️')
+            .setTitle('❄️ Write the Question of the Day ❄️') //CAMBIAR EMOJIS
             .addComponents(
                 new ActionRowBuilder().addComponents(
                     new TextInputBuilder()

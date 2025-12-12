@@ -28,8 +28,6 @@ module.exports = {
     metadata: new SlashCommandBuilder()
         .setName('work')
         .setDescription('Work and get some mora.'),
-    // Ya no necesitas la propiedad 'data' separada para el SlashCommandBuilder
-    // ni el objeto 'metadata' plano.
 
     async run(client, interaction, tools) {
         await interaction.deferReply({ ephemeral: false });
@@ -54,7 +52,7 @@ module.exports = {
                 .setTitle('⏳ You can\'t work yet! ⏳')
                 .setDescription(`You need to rest a bit. Come back in ${hours}h ${minutes}m ${seconds}s for your next work.`)
                 .setTimestamp()
-                .setFooter({ text: 'Tsaritsa\'s Voice Economy System', iconURL: client.user.displayAvatarURL() });
+                .setFooter({ text: 'Tsaritsa\'s Voice Economy System', iconURL: client.user.displayAvatarURL() }); //CAMBIAR
 
             return await interaction.editReply({ embeds: [cooldownEmbed] });
         } else {

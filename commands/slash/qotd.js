@@ -9,7 +9,7 @@ module.exports = {
     },
     async run(client, interaction, tools) {
         const initialEmbed = new EmbedBuilder()
-            .setTitle('🧊 New Question of the Day 🧊')
+            .setTitle('🧊 New Question of the Day 🧊') //CAMBIAR EMOJIS
             .setDescription('Press the button below to write the question that will be sent to the QOTD channel.')
             .setColor('#325a97');
 
